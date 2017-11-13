@@ -1,4 +1,4 @@
-### ME-495 Project proposal
+### ME-495 Project proposal - Aamir Hussain, Aaron Weatherly, Hannah Emnett, Peng Peng, Srikanth Kilaru
 #### Objective
 
 We want baxter to learn the names of objects placed in front of it via voice interaction and then subsequently respond to a voice command to fetch any object that it has already learnt.   
