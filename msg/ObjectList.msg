@@ -8,6 +8,8 @@
 ##
 
 int32     state     # Current State of Baxter execution
+int32     next      # This is actually a boolean that indicates whether
+                    # PickNMove can go on to the next object
 ##
 # This is an array of arrays contains all the geometry data for all objects
 # in a group. Objects in a group share the same index into this field.
