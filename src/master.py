@@ -80,16 +80,10 @@ class master():
         self.current_obj_index += 1
         self.obj_list_publisher.publish(obj_data)
         
-    def send_fetch_objects(self, obj_data):
-        
-        self.obj_list_publisher.publish(obj_data)
 
     def copy_pcl_data_ordered(self, pcl_data):
+
         self.pcl_db = copy.deepcopy(sorted(pcl_data.centroids, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))       
-        
-    def send_sort_objects(self, obj_data):
-        
-        self.obj_list_publisher.publish(obj_data)
         
     def state_callback(self, msg):
         if (self.current_state == STATE_INIT):
@@ -114,7 +108,7 @@ class master():
                 ###
                 obj_data = ObjectList()
                 obj_data.state = STATE_SORT
-                send_sort_objects(self, obj_data)
+                self.obj_list_publisher.publish(obj_data)
             elif (msg.state == STATE_FINISH):
                 # Can only receive this message from the PickNMove node
                 # We dont need to do anything here till we hear a sort command
@@ -176,7 +170,7 @@ class master():
                 obj_data = ObjectList()
                 obj_data.state = STATE_FETCH
                 obj_data.obj_index = self.obj_db[msg.object_name].group_id
-                send_fetch_objects(self, obj_data)
+                self.obj_list_publisher.publish(obj_data)
             else:
                 # Hearing this object name for the first time in the fetch phase, this should not be happening / not handled
                 rospy.loginfo("Not expecting a name in the command in this state %d", self.current_state)
@@ -185,7 +179,7 @@ class master():
            rospy.loginfo("Not expecting a name in the command in this state %d", self.current_state)
            return()  
 
-        
+   
 def main():
     
     # Creating our node
