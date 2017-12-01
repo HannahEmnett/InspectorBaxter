@@ -6,5 +6,5 @@
 ##
 
 geometry_msgs/Point32[] centroids  # Array of centroids of all objects perceived
-Float32[] heights                  # Array of heights of all objects perceived
-Float32[] widths                   # Array of widths of all objects perceived
+float32[] heights                  # Array of heights of all objects perceived
+float32[] widths                   # Array of widths of all objects perceived
