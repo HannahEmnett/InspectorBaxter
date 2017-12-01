@@ -14,6 +14,7 @@
 # For example, baxter holds up the object during training and waits till a
 # name is spoken and once the name and object are associated in the master node,
 # master sends a message with state=10 to let the PickNMove node know that it
-# can go on to the next object
+# can go on to the next object. This state is sent only by the master node and is
+# intended for the PickNMove node
 ##
 int32 state
