@@ -24,13 +24,13 @@ or phrases that pocketsphinx listens for and publishes. Phrases can consist of m
 long as they are all defined in the dictionary file. Whenever a keyword is heard, `pocketsphinx` 
 will publish it as a string to the `/pocketsphinx_recognizer/output` topic.
 
-Our node, [baxter_speech.py][baxter_speech.py] subscribes to the `/pocketsphinx_recognizer/output`
+The node, [baxter_speech.py][baxter_speech.py] subscribes to the `/pocketsphinx_recognizer/output`
 topic and then publishes to the `/inspector/state` topic based on what the user has said. When the
 user identifies the names of objects in Baxter's environment, the node publishes to the `inspector/
 naming` topic. The node also publishes contextual [images][images] to baxter's screen on the `/robot/
 xdisplay` topic. There is built-in error handling so that the user cannot change Baxter's state unless 
-certain conditions are met and the master node allows it. This ensures a proper sequence of operations
-for the robot to follow.
+certain conditions are met and the master node allows it. This ensures that the robot follows the 
+proper sequence of operations.
 
 The launch file, [baxter_speech.launch][baxter_speech.launch] runs both the `pocketsphinx` 
 and the `baxter_speech` nodes and defines the location of the dictionary and keyword files. To run 
