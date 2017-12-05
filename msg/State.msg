@@ -5,9 +5,9 @@
 # 2 - implies the demo is in sorting phase
 # 3 - implies the demo is in fetching phase
 # 4 - implies the demo is exiting and we should shutdown cleanly
-#
 # 5 - previous state has finished execution and ready for next state
 # for example, when all the objects have been picked up and named, then the
 # PickNMove node will send us this value (5) in the state message
+# 6 STATE_CHNG_ERR- implies  
 ##
 int32 state

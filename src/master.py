@@ -20,13 +20,17 @@ from inspector.msg import State
 # for example, when all the objects have been picked up and named, then the
 # PickNMove node will send us this value (5) in the state message
 
+# any state transitions
+# Send a finish/standby between trains
 
-STATE_INIT    = 0
-STATE_TRAIN   = 1
-STATE_SORT    = 2
-STATE_FETCH   = 3
-STATE_EXIT    = 4
-STATE_FINISH  = 5
+
+STATE_INIT     = 0
+STATE_TRAIN    = 1
+STATE_SORT     = 2
+STATE_FETCH    = 3
+STATE_EXIT     = 4
+STATE_FINISH   = 5
+STATE_CHNG_ERR = 6
 
 class object():
     def __init__(self, name, group_id):
@@ -49,9 +53,7 @@ class master():
         rospy.Subscriber('/inspector/state', State, self.state_callback)
         rospy.Subscriber('/inspector/pcl_data', PclData, self.pcl_data_callback)
         rospy.Subscriber('/inspector/naming', ObjectName, self.name_callback)
-        
-        self.current_state = STATE_INIT
-        self.current_obj_index = 0
+        ndex = 0
         self.group_index = 0
         
         # we will see if we need the time and rate stuff later
