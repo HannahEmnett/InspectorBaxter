@@ -58,9 +58,10 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg
   FILES
   ObjectList.msg
-  ObjectName.msg
   PclData.msg
+  Pcl_Update.msg
   State.msg
+  Update.msg
 )
 
 ## Generate services in the 'srv' folder
