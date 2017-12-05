@@ -11,3 +11,5 @@
 # 6 STATE_CHNG_ERR- implies  
 ##
 int32 state
+string name
+int32 done
