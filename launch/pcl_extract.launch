@@ -1,0 +1,109 @@
+<launch>
+
+  <arg name="show_pcl" default="false" />
+  <arg name="gui" default="false" />
+  <arg name="rvizConfig" default="$(find inspector)/rviz/rvizConfig.rviz" />
+
+  <!-- Start XtionPRO LIVE -->
+  <!-- <include ns="xtionProLive" file="$(find openni2_launch)/launch/openni2.launch" /> -->
+
+  <!-- <include if="$(arg frames)" file="$(find rgbd_launch)/launch/kinect_frames.launch">
+      <arg name="camera" value="camera" />
+  </include> -->
+
+  <!-- Launch nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen"/>
+
+  <!-- CropBox filter: filters out points outside of the specified volume below -->
+  <group ns="box_filter">
+    <node pkg="nodelet" type="nodelet" name="cropbox" args="load pcl/CropBox /pcl_manager" output="screen">
+      <remap from="~input" to="/camera/depth/points" />
+      <rosparam>
+        min_x: -0.4
+        max_x: 0.4
+        min_y: -0.3
+        max_y: 0.015
+        min_z: 0.5
+        max_z: 1.3
+      </rosparam>
+    </node>
+  </group>
+
+  <!-- VoxelGrid filter: downsampling points to reduce amount of data that is processed and passed to later nodelets -->
+  <group ns="cloud_downsampler">
+    <node pkg="nodelet" type="nodelet" name="voxel" args="load pcl/VoxelGrid /pcl_manager" output="screen">
+      <remap from="~input" to="/box_filter/cropbox/output" />
+      <rosparam>
+        leaf_size: 0.005
+        filter_field_name: z
+        filter_limit_min: 0.5
+        filter_limit_max: 1.3
+      </rosparam>
+    </node>
+  </group>
+
+  <!-- SACSegmentation filter: identifies table surface -->
+  <!-- <group ns="normal_segmentation">
+    <node pkg="nodelet" type="nodelet" name="segmentation" args="load pcl/SACSegmentation /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <param name="model_type" value="0" type="int" />
+      <param name="distance_threshold" value="0.02" type="double" />
+    </node>
+  </group> -->
+
+  <!-- Separate table surface and all other points into two point clouds -->
+  <!-- <group ns="extract_indices" > -->
+    <!-- Point cloud for table surface -->
+    <!-- <node pkg="nodelet" type="nodelet" name="extract_inliers" args="load pcl/ExtractIndices /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <remap from="~indices" to="/normal_segmentation/segmentation/inliers" />
+      <param name="approximate_sync" value="true" />
+    </node> -->
+
+    <!-- Point clouds for everything else -->
+    <!-- <node pkg="nodelet" type="nodelet" name="extract_outliers" args="load pcl/ExtractIndices /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <remap from="~indices" to="/normal_segmentation/segmentation/inliers" />
+      <param name="negative" value="true" />
+      <param name="approximate_sync" value="true" />
+    </node>
+  </group> -->
+
+  <!-- Custom filter that removes all points below the table surface -->
+  <!-- <group ns="table_cutoff" >
+    <node pkg="cv_inspector_baxter" type="table_cutoff.py" name="table_cutoff" output="screen"
+          respawn="true" />
+    <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/PassThrough /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <rosparam>
+        input_frame: table_frame
+        filter_field_name: y
+        filter_limit_min: -0.3
+        filter_limit_max: 0.015
+      </rosparam>
+    </node>
+  </group> -->
+
+  <!-- StatisticalOutlierRemoval filter: removes any random/stray points to clean up the data -->
+  <group ns="outlier">
+    <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/StatisticalOutlierRemoval /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <!-- <remap from="~input" to="/table_cutoff/cutoff/output" /> -->
+      <rosparam>
+        mean_k: 40
+        stddev: 0.01
+      </rosparam>
+    </node>
+  </group>
+
+  <!-- Extract clusters from dataset using Euclidean cluster extraction -->
+  <node pkg="inspector" name="cluster_extraction" type="cluster_extractor" output="screen" />
+
+  <!-- Start rviz to display the extracted point cloud clusters -->
+  <node pkg="rviz" type="rviz" respawn="false" name="rviz" if="$(arg show_pcl)"
+        args="-d $(arg rvizConfig)" />
+
+  <!-- Launch configuration GUI if desired -->
+  <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" if="$(arg gui)" />
+
+</launch>
