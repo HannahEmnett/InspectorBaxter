@@ -2,7 +2,7 @@
 
   <arg name="show_pcl" default="false" />
   <arg name="gui" default="false" />
-  <arg name="rvizConfig" default="$(find InspectorBaxter)/rviz/rvizConfig.rviz" />
+  <arg name="rvizConfig" default="$(find inspector)/rviz/rvizConfig.rviz" />
 
   <!-- Start XtionPRO LIVE -->
   <!-- <include ns="xtionProLive" file="$(find openni2_launch)/launch/openni2.launch" /> -->
@@ -97,7 +97,7 @@
   </group>
 
   <!-- Extract clusters from dataset using Euclidean cluster extraction -->
-  <node pkg="InspectorBaxter" name="cluster_extraction" type="cluster_extractor" output="screen" />
+  <node pkg="inspector" name="cluster_extraction" type="cluster_extractor" output="screen" />
 
   <!-- Start rviz to display the extracted point cloud clusters -->
   <node pkg="rviz" type="rviz" respawn="false" name="rviz" if="$(arg show_pcl)"

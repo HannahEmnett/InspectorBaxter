@@ -21,7 +21,7 @@ from sensor_msgs.msg import (
     Image,
 )
 from std_msgs.msg import String
-from InspectorBaxter.msg import State
+from inspector.msg import State
 
 # define constant values for the states
 STATE_INIT      = 0

@@ -2,9 +2,9 @@
 
 import rospy
 import baxter_interface
-#from final_proj.msg import Update
-#from final_proj.msg import PclData
-#from final_proj.msg import ObjectList
+from inspector.msg import Update
+from inspector.msg import PclData
+from inspector.msg import ObjectList
 from sensor_msgs.msg import JointState
 import roslib; roslib.load_manifest("moveit_python")
 from moveit_python import PlanningSceneInterface, MoveGroupInterface
