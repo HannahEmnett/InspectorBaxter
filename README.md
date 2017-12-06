@@ -167,15 +167,18 @@ Next, open `~/catkin_ws/src/moveit_robots/baxter/baxter_moveit_config/launch/dem
 <arg name="right_electric_gripper" default="true"/>
 <arg name="left_electric_gripper" default="true"/> 
 ```
+Finally, install all of the baxter folders located [here](https://github.com/RethinkRobotics), specifically the following folders: baxter, baxter_common, baxter_examples, baxter_interface, baxter_tools. Instructions for setting up the workstation for Baxter can be found [here](http://sdk.rethinkrobotics.com/wiki/Workstation_Setup). Everything was done on Unbuntu 16.05 and ROS kinetic distro. 
+
 You are now prepared to move Baxter!
 
 #### Instructions
 
-First, ensure Baxter starts in the neutral position.
+First, ensure Baxter starts in the neutral position. Next, if you are only trying to move Baxter (not use the listening or point cloud extracting functionality), run the following.
 ```
 >>rosrun inspector move_neutral.py
+>>roslaunch inspector move_baxter.launch
 ```
-
+This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then ```rosrun baxter_tools enable_robot.py -d`. 
 
 ## Putting it all together
 
