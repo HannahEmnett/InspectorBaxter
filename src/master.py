@@ -77,6 +77,7 @@ class Master():
 
         self.current_obj_index = 0
         self.group_index = 0
+        self.current_state = STATE_INIT
         # This is where we store the ordered copy of all the 
         # ordered list of objects
         self.objects = []
