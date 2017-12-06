@@ -167,7 +167,7 @@ Next, open `~/catkin_ws/src/moveit_robots/baxter/baxter_moveit_config/launch/dem
 <arg name="right_electric_gripper" default="true"/>
 <arg name="left_electric_gripper" default="true"/> 
 ```
-Finally, install all of the baxter folders located [here](https://github.com/RethinkRobotics), specifically the following folders: baxter, baxter_common, baxter_examples, baxter_interface, baxter_tools. Instructions for setting up the workstation for Baxter can be found [here](http://sdk.rethinkrobotics.com/wiki/Workstation_Setup). Everything was done on Unbuntu 16.05 and ROS kinetic distro. 
+Finally, install all of the baxter folders located [here](https://github.com/RethinkRobotics), specifically the following folders: baxter, baxter_common, baxter_examples, baxter_interface, baxter_tools. Instructions for setting up the workstation for Baxter can be found [here](http://sdk.rethinkrobotics.com/wiki/Workstation_Setup). Everything was done on Unbuntu 16.04 and ROS kinetic distro. 
 
 You are now prepared to move Baxter!
 
