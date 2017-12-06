@@ -19,12 +19,12 @@
     <node pkg="nodelet" type="nodelet" name="cropbox" args="load pcl/CropBox /pcl_manager" output="screen">
       <remap from="~input" to="/camera/depth/points" />
       <rosparam>
-        min_x: -0.4
-        max_x: 0.4
+        min_x: -0.3
+        max_x: 0.3
         min_y: -0.3
         max_y: 0.015
         min_z: 0.5
-        max_z: 1.3
+        max_z: 1.1
       </rosparam>
     </node>
   </group>
@@ -98,6 +98,10 @@
 
   <!-- Extract clusters from dataset using Euclidean cluster extraction -->
   <node pkg="inspector" name="cluster_extraction" type="cluster_extractor" output="screen" />
+  <!-- <node pkg="cv_inspector_baxter" name="cloud1" type="point_publisher1" /> -->
+  <!-- <node pkg="cv_inspector_baxter" name="cloud2" type="point_publisher2" />
+  <node pkg="cv_inspector_baxter" name="cloud3" type="point_publisher3" />
+  <node pkg="cv_inspector_baxter" name="cloud4" type="point_publisher4" /> -->
 
   <!-- Start rviz to display the extracted point cloud clusters -->
   <node pkg="rviz" type="rviz" respawn="false" name="rviz" if="$(arg show_pcl)"
