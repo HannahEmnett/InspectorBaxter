@@ -51,7 +51,6 @@ class Objects():
         self.name = name
     def associate_group_id(self, group_id):
         self.group_id = group_id
-<<<<<<< HEAD
 
 def in_range(hw_ratio, group_ids):
     i = 0
@@ -61,19 +60,9 @@ def in_range(hw_ratio, group_ids):
         i += 1
     return None
 
-#container class for everythang
+#container class for every thing
 class Master():
     
-=======
-        self.pcl_data_index_list = []
-
-    def add_pcl_index(pcl_index):
-        self.pcl_data_index_list.append(pcl_index)
-
-#container class for everythang
-class master():
-
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
     def __init__(self):
         
         self.state_publisher = rospy.Publisher('/inspector/state',
@@ -84,7 +73,6 @@ class master():
                                                  Pcl_Update, queue_size=10)
         rospy.Subscriber('/inspector/state', State, self.state_callback)
         rospy.Subscriber('/inspector/pcl_data', PclData, self.pcl_data_callback)
-<<<<<<< HEAD
         rospy.Subscriber('/inspector/master_update', Update, self.update_callback)
 
         self.current_obj_index = 0
@@ -114,48 +102,14 @@ class master():
         obj_data.centroids = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].centroids)
         obj_data.heights = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].heights)
         obj_data.widths = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].widths)
-=======
-        rospy.Subscriber('/inspector/naming', ObjectName, self.name_callback)
-
-        self.current_state = STATE_INIT
-        self.current_obj_index = 0
-        self.group_index = 0
-
-        # we will see if we need the time and rate stuff later
-        #self.start_time = rospy.Time.now().to_sec()
-        #self.rate = rospy.Rate(50)
-
-        # Initialize the object DB containing PCL data and object group ID.
-        # TheDictionary keys are the object names coming in from speech module
-        self.obj_db = dict()
-        # This is where we store the ordered copy of all the unnamed,
-        # ungrouped (by obj type), data received from PCL node
-        self.pcl_db = PclData()
-
-        rospy.spin()
-
-    def send_object_data(self, obj_data):
-
-        obj_data.centroids = copy.deepcopy(self.pcl_db.centroids[self.current_obj_index])
-        obj_data.heights = copy.deepcopy(self.pcl_db.heights[self.current_obj_index])
-        obj_data.widths = copy.deepcopy(self.pcl_db.widths[self.current_obj_index])
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
         # increment the index into the PclData
         self.current_obj_index += 1
         self.obj_list_publisher.publish(obj_data)
 
     def send_sorted_objects(self, obj_data):
-<<<<<<< HEAD
         for object in self.objects:
             obj_data.objects.append(object.pcl)
             obj_data.obj_index.append(object.group_id)
-=======
-
-        for object in self.obj_db.itervalues():
-            for index in object.pcl_data_index_list:
-                obj_data.objects[object.group_id].append(copy.deepcopy(self.pcl_db[index]))
-
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
         self.obj_list_publisher.publish(obj_data)
 
     def copy_pcl_data_ordered(self, pcl_data):
@@ -167,7 +121,6 @@ class master():
             object.add_pcl_data(object, pcl)
             self.objects.append(object)
 
-<<<<<<< HEAD
         group_ids = []
         first = True
         i = 0
@@ -187,10 +140,6 @@ class master():
             else:
                 object.associate_group_id(self, id)
                 
-=======
-        self.pcl_db = copy.deepcopy(sorted(pcl_data.centroids, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))
-
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
     def state_callback(self, msg):
         if (self.current_state == STATE_INIT):
             if (msg.state == STATE_TRAIN):
@@ -323,7 +272,6 @@ class master():
             return()
 
     def pcl_data_callback(self, msg):
-<<<<<<< HEAD
         # Store the incoming data, in a sorted fashion
         copy_pcl_data_ordered(msg)     
 
@@ -342,45 +290,6 @@ class master():
     def fetch_object(name):
         for object in self.objects:
             if object.name == name:
-=======
-        if (self.current_state == STATE_TRAIN):
-            # Store the incoming data, in a sorted fashion
-            copy_pcl_data_ordered(msg)
-        else:
-            # Ignore incoming PCL data when not in TRAIN state
-            return()
-
-
-    def name_callback(self, msg):
-        if (self.current_state == STATE_TRAIN):
-            # In the TRAIN phase, when a name is received,
-            # it needs to be associated with a PCL data
-            # and a commandneeds to be sent to PickNMove to move forward to
-            # the next object
-            if msg.object_name in self.obj_db:
-                # We have already heard this name before so all we need to do
-                # is add the current plc_data_index to the list of indices
-                # in the object group
-                self.obj_db[msg.object_name].add_pcl_index(self.current_obj_index)
-            else:
-                # Hearing this object name for the first time, create a new
-                # dictionary entry, associate the name
-                # with a new group ID, and add the current PCL data index to
-                # the list of objects with this name
-                self.obj_db[msg.object_name] = object(msg.object_name, self.group_index)
-                self.group_index += 1
-                self.obj_db[msg.object_name].add_pcl_index(self.current_obj_index)
-
-            # In either case, since we heard the name, send the next object's
-            # location to PickNMove
-            obj_data = ObjectList()
-            obj_data.state = STATE_TRAIN
-            obj_data.next = 1
-            send_object_data(self, obj_data)
-
-        elif (self.current_state == STATE_FETCH):
-            if msg.object_name in self.obj_db:
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
                 # We have already heard this name before so all we need to do
                 # is send the group_id to PickNMove
                 obj_data = ObjectList()
@@ -388,8 +297,6 @@ class master():
                 obj_data.obj_index = object.group_id
                 self.obj_list_publisher.publish(obj_data)
                 return()
-<<<<<<< HEAD
-        
         # Hearing this object name for the first time in the fetch
         # phase, this should not be happening
         rospy.loginfo("Uknownobject name %s in state %d", msg.name, self.current_state)
@@ -405,14 +312,6 @@ class master():
             obj_data.next = 1
         send_object_data(self, obj_data)
         
-   
-=======
-        else:
-           rospy.loginfo("Not expecting a name in the command in this state %d", self.current_state)
-           return()
-
-
->>>>>>> c6917cc0662c52959b309860e14b917da6ff4542
 def main():
 
     # Creating our node
