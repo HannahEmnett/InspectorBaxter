@@ -162,11 +162,18 @@ This node contains all of the necessary code for moving Baxter. Utilizing functi
 ```
 >>sudo apt-get install ros-kinetic-moveit
 ```
+Next, open `~/catkin_ws/src/moveit_robots/baxter/baxter_moveit_config/launch/demo_baxter.launch`. About five lines down, change the default of the electric grippers so they are both "True" as shown below.
+``` HTML
+<arg name="right_electric_gripper" default="true"/>
+<arg name="left_electric_gripper" default="true"/> 
+```
+You are now prepared to move Baxter!
+
 #### Instructions
 
 First, ensure Baxter starts in the neutral position.
 ```
->>rosrun InspectorBaxter move_neutral.py
+>>rosrun inspector move_neutral.py
 ```
 
 
