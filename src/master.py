@@ -4,13 +4,11 @@ import numpy as np
 import copy
 import math
 
-from inspector.msg import ObjectName
 from inspector.msg import ObjectList
 from inspector.msg import PclData
 from inspector.msg import Pcl_Update
 from inspector.msg import Update
 from inspector.msg import State
-
 
 # State definitions
 # 0 - implies the receiver should initialize itself
@@ -31,9 +29,9 @@ STATE_INIT     = 0
 STATE_TRAIN    = 1
 STATE_SORT     = 2
 STATE_FETCH    = 3
-STATE_FINISH   = 4
+STATE_EXIT     = 4
 STATE_STANDBY  = 5
-STATE_EXIT     = 6
+STATE_FINISH   = 6
 
 HW_RATIO_RANGE_MIN = 0.01
 HW_RATIO_RANGE_MIN = 0.02
@@ -72,8 +70,10 @@ class Master():
         self.pcl_req_publisher = rospy.Publisher('/inspector/pcl_req',
                                                  Pcl_Update, queue_size=10)
         rospy.Subscriber('/inspector/state', State, self.state_callback)
-        rospy.Subscriber('/inspector/pcl_data', PclData, self.pcl_data_callback)
-        rospy.Subscriber('/inspector/master_update', Update, self.update_callback)
+        rospy.Subscriber('/inspector/pcl_data', PclData,
+                         self.pcl_data_callback)
+        rospy.Subscriber('/inspector/master_update', Update,
+                         self.update_callback)
 
         self.current_obj_index = 0
         self.group_index = 0
@@ -142,14 +142,17 @@ class Master():
                 object.associate_group_id(self, id)
                 
     def state_callback(self, msg):
+        print "state_callback in state %d with new state %d".format(self.current_state, msg.state)
         if (self.current_state == STATE_INIT):
             if (msg.state == STATE_TRAIN):
                 self.current_state = STATE_TRAIN
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
-                self.req_pcl_data(self)
-                self.handle_naming(self, msg.name)
+                pcl_req = Pcl_Update()
+                pcl_req.state = True
+                self.pcl_req_publisher.publish(pcl_req)
+                self.handle_naming(msg.name)
                 ###
                 # copy state and send object data for the first object only
                 # We will send the object data for others once we receive names
@@ -164,15 +167,13 @@ class Master():
                 cleanup_all_data(self)
                 self.state_publisher.publish(state_msg)
             else:
-                rospy.loginfo("wrong state Rcvd: %d, current state %d", msg.state, self.current_state )
+                print "wrong state Rcvd: %d, current state %d".format(msg.state, self.current_state )
                 return()
         elif (self.current_state == STATE_TRAIN):
             if (msg.state == STATE_SORT):
                 self.current_state = STATE_SORT
-                ##
-                # Send the request to PCL node to get list of PCL data for objects on table
-                ##
-                self.req_pcl_data(self)
+                pcl_req.state = True
+                self.pcl_req_publisher.publish(pcl_req)
                 ###
                 # copy state and object data list here
                 ###
@@ -183,8 +184,10 @@ class Master():
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
-                self.req_pcl_data(self)
-                self.handle_naming(self, msg.name)
+                pcl_req = Pcl_Update()
+                pcl_req.state = True
+                self.pcl_req_publisher.publish(pcl_req)
+                self.handle_naming(msg.name)
                 ###
                 # copy state and send object data for the first object only
                 # We will send the object data for others once we receive names
@@ -197,7 +200,9 @@ class Master():
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
-                self.req_pcl_data(self)
+                pcl_req = Pcl_Update()
+                pcl_req.state = True
+                self.pcl_req_publisher.publish(pcl_req)
                 self.fetch_object(msg.name)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
@@ -214,18 +219,11 @@ class Master():
                 obj_data.state = STATE_EXIT
                 self.obj_list_publisher.publish(obj_data)
             else:
-                rospy.loginfo("wrong state Rcvd: %d, current state %d", msg.state, self.current_state)
+                print "wrong state Rcvd: %d, current state %d".format(msg.state, self.current_state)
                 return()
         elif (self.current_state == STATE_SORT):
             if (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
-                ###
-                # copy state and wait till name of object to be fetched is received
-                ###
-                ##
-                # Send the request to PCL node to get list of PCL data for objects on table
-                ##
-                self.req_pcl_data(self)
                 self.fetch_object(msg.name)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
@@ -242,15 +240,11 @@ class Master():
                 obj_data.state = STATE_EXIT
                 self.obj_list_publisher.publish(obj_data)
             else:
-                rospy.loginfo("wrong state Rcvd: %d, current state %d", msg.state, self.current_state)
+                print "wrong state Rcvd: %d, current state %d".format(msg.state, self.current_state)
                 return()
         elif (self.current_state == STATE_FETCH):
             if (msg.state == STATE_FETCH):
-                self.req_pcl_data(self)
                 self.fetch_object(msg.name)
-                ###
-                # copy state and wait till name of object to be fetched is received 
-                ###
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
                 state_msg.state = STATE_STANDBY
@@ -266,29 +260,28 @@ class Master():
                 obj_data.state = STATE_EXIT
                 self.obj_list_publisher.publish(obj_data)
             else:
-                rospy.loginfo("wrong state Rcvd: %d, current state %d", msg.state, self.current_state)
+                print "wrong state Rcvd: %d, current state %d".format(msg.state, self.current_state)
                 return()
         else:
-            rospy.loginfo("Unknown state Rcvd: %d", msg.state)
+            print "Unknown state Rcvd: %d".format(msg.state)
             return()
 
     def pcl_data_callback(self, msg):
         # Store the incoming data, in a sorted fashion
+        print "pacl_data_callback in state %d".format(self.current_state)
         copy_pcl_data_ordered(msg)     
 
-    def req_pcl_data(self):
-        pcl_req = Pcl_Update()
-        pcl_req.state = True
-        self.pcl_req_publisher.publish(pcl_req)
-        
     def update_callback(self, msg):
+        print "update_callback in state %d".format(self.current_state)
         state_msg = State()
         state_msg.state = STATE_STANDBY
         if (done_with_training(self)):
+            print "Done with training"
             state_msg.done = True
         self.state_publisher.publish(state_msg)
 
     def fetch_object(name):
+        print "fetch_object: name %s in state %d".format(name, self.current_state)
         for object in self.objects:
             if object.name == name:
                 # We have already heard this name before so all we need to do
@@ -296,14 +289,16 @@ class Master():
                 obj_data = ObjectList()
                 obj_data.state = STATE_FETCH
                 obj_data.obj_index = object.group_id
+                print "known object name %s with group_id %d in state %d".format(name, object.group_id, self.current_state)
                 self.obj_list_publisher.publish(obj_data)
                 return()
         # Hearing this object name for the first time in the fetch
         # phase, this should not be happening
-        rospy.loginfo("Uknownobject name %s in state %d", msg.name, self.current_state)
+        print "Uknown object name %s in state %d".format(msg.name, self.current_state)
         return()
                                         
-    def handle_naming(self, name):
+    def handle_naming(name):
+        print "name %s in state %d".format(name, self.current_state)
         self.objects[self.current_obj_index].associate_name(self.objects[self.current_obj_index], name)
         # In either case, since we heard the name, send the next object's
         # location to PickNMove
@@ -319,8 +314,9 @@ def main():
     rospy.init_node('master_node')
     master = Master()
     # Get the first snapshot early on
-    master.req_pcl_data(master)
-        
+    pcl_req = Pcl_Update()
+    pcl_req.state = True
+    master.pcl_req_publisher.publish(pcl_req)
 
 
 if __name__ == '__main__':

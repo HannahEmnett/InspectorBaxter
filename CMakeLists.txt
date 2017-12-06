@@ -51,3 +51,4 @@ target_link_libraries(cluster_extractor
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+

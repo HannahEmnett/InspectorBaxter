@@ -12,12 +12,12 @@
 # STATE_TRAIN    = 1
 # STATE_SORT     = 2
 # STATE_FETCH    = 3
-# STATE_FINISH   = 4
+# STATE_EXIT     = 4
 # STATE_STANDBY  = 5
-# STATE_EXIT     = 6
+# STATE_FINISH   = 6
 ##
 int32 state
-# name of object intraining or fetching phase
+# name of object in training or fetching phase
 string name
 # done - only between Speech and Master when Speech needs to be ready to hear about new object name
 int32 done
