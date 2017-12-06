@@ -48,7 +48,8 @@ Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 5- standby (waiting on user) -internal phase   
 
 ## Breakdown:
-phase 0: init   
+phase 0: init  
+- User says "Start"
 - Startup procedure for all nodes   
 - Phase immediately updates to 5 (standby) and master.py publishes on state.msg and obj_list.msg to notify of standby   
 
@@ -60,53 +61,49 @@ phase 5: standby
 
 phase 1: training   
 *Note: Must be first after phase 0*   
-- user says "Train" or whatever   
-   - baxter_speech pub a 1 on state.msg 1   
-   - master is updated of training state   
-   - master pub pcl_update.msg on i/pcl_req   
-   - proc_pc publishes pcldata.msg on i/pcl_data   
-   - master publishes objlist on i/obj_list (only first but stores others)   
-   - pick_up picks up object at centroid and lifts to user. publishes update.msg on i/master update   
-   - master publishes i/state as a done flag so that baxter_speech is listening   
-   - User says "Can"   
-   - baxter_speech pub on object name on i/state the string   
-   - master publishes objectlist on i/obj_list (knows to replace object and pick up next object with NEXT flag in objectlist.msg: 0 is first, 1 is pick up next)   
-   - master stores obj_id as ratio of height and width from i/state   
-   - User says "Bottle" (the above two steps loop)   
-   - if out of objects (master will know), master publishes phase 5 on objectlist.msg on i/obj_list and state.msg on i/state   
+- user says "Baxter, learn <object 1 name>"   
+- baxter_speech publishes state=1 and name="<object 1 name>" on State.msg 
+- master is updated of training state   
+- master pub pcl_update.msg on i/pcl_req   
+- proc_pc publishes pcldata.msg on i/pcl_data   
+- master publishes objlist on i/obj_list (only first but stores others)   
+- pick_up picks up object at centroid and lifts to user. publishes update.msg on i/master update   
+- master publishes i/state as a done flag so that baxter_speech is listening      
+- master publishes objectlist on i/obj_list (knows to replace object and pick up next object with NEXT flag in objectlist.msg: 0 is first, 1 is pick up next)   
+- master stores obj_id as ratio of height and width from i/state   
+- User says "Baxter, learn <object 2 name>" (the above two steps loop)   
+- if out of objects (master will know), master publishes phase 5 on objectlist.msg on i/obj_list and state.msg on i/state   
 
 phase 2: sort   
-   - User says "Sort" (must happen after train but fetch can be first), transitions when in standby   
-   - baxter_speech pub a 2 on state.msg i/state   
-   - master is updated of sorting state   
-   - master publishes pcl_update.msg on i/pcl_req   
-   - proc_pc publishes pcldata.msg on i/pcl_data   
-   - master determines obj_ids internally   
-   - master publishes objlist on i/obj_list   
-   - pick_up picks up object at centroid and moves to predetermined shelf based on obj id. It internally stores locations of all previously sorted objects. Loops until everything is sorted.   
-   - Publishes update.msg on i/master update   
-   - Master publishes on i/state and i/obj_list a state of 5   
+- User says "Baxter, sort" (must happen after train but fetch can be first), transitions when in standby   
+- baxter_speech pub state=2 in State.msg on i/state   
+- master is updated of sorting state   
+- master publishes pcl_update.msg on i/pcl_req   
+- proc_pc publishes pcldata.msg on i/pcl_data   
+- master determines obj_ids internally   
+- master publishes objlist on i/obj_list   
+- pick_up picks up object at centroid and moves to predetermined shelf based on obj id. It internally stores locations of all previously sorted objects. Loops until everything is sorted.   
+- Publishes update.msg on i/master update   
+- Master publishes on i/state and i/obj_list a state of 5   
 
 
 phase 3: fetch
-   - User says "Fetch" (must happen after train but sort can be first)   
-   - baxter_speech pub a 3 state.msg on i/state   
-   - master is updated of fetch state   
-   - User says "Fetch Can"   
-   - baxter_speech pub on i/state   
-   - master pub on i/pcl_req   
-   - proc_pc receives pcl_req from master and returns on pcl_update   
-   - master looks through list and identifies “can” centroid   
-   - master pub objectlist.msg on i/obj_list (this message also includes identity), only 1 location or Nans   
-   - pick_up will test: if all Nans, will look in previously sorted location for objs of correct id, ELSE, will pick up at centroid provided and present to user. Publishes update.msg on i/master_update   
-   - User says "Open"   
-   - baxter_speech publishes standby state on i/state   
-   - master publishes standby on objectlist.msg i/obj_list and on i/state (ensures Baxter release the can to the user and returns to neutral)   
+- User says "Baxter, fetch <object 1 name>" (must happen after train but sort can be first)   
+- baxter_speech pub state=3 and name="<object 1 name>" in State.msg on i/state   
+- master is updated of fetch state  
+- master pub on i/pcl_req   
+- proc_pc receives pcl_req from master and returns on pcl_update   
+- master looks through list and identifies “can” centroid   
+- master pub objectlist.msg on i/obj_list (this message also includes identity), only 1 location or Nans   
+- pick_up will test: if all Nans, will look in previously sorted location for objs of correct id, ELSE, will pick up at centroid provided and present to user. Publishes update.msg on i/master_update   
+- User says "Baxter, open"   
+- baxter_speech publishes standby state on i/state   
+- master publishes standby on objectlist.msg i/obj_list and on i/state (ensures Baxter release the can to the user and returns to neutral)   
 
 phase 4: shutdown   
-   - User says "Goodbye"   
-   - baxter_speech pub 4 on i/state   
-   - master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral   
+- User says either "Shut down", "Exit", or "Stop"   
+- baxter_speech pub state=4 on i/state   
+- master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral   
 
 ## Master Node
 
@@ -123,8 +120,7 @@ recognition. It listens for specific keywords from the user and updates Baxter's
 state accordingly.
 
 #### Instructions
-First, follow tutorials [here][baxter_tutorials] to set up your workstation and connect to Baxter.
-Next, install the `pocketsphinx` package by following the instructions [here][pocketsphinx].
+First, install the `pocketsphinx` package by following the instructions [here][pocketsphinx].
 Also, make sure your workstation has OpenCV installed: `sudo apt-get install python-opencv`.
 
 To identify the keywords we will be using, two files needed to be edited. [voice_cmd.dic][dic]
@@ -176,7 +172,6 @@ First, ensure Baxter starts in the neutral position.
 
 
 [baxter_speech]: https://github.com/weatherman03/baxter_speech
-[baxter_tutorials]: http://sdk.rethinkrobotics.com/wiki/Baxter_Setup
 [pocketsphinx]: https://github.com/UTNuclearRoboticsPublic/pocketsphinx
 [dic]: https://github.com/weatherman03/baxter_speech/blob/master/vocab/voice_cmd.dic
 [cmu]: http://www.speech.cs.cmu.edu/cgi-bin/cmudict
