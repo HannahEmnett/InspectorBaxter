@@ -29,10 +29,11 @@ STATE_INIT     = 0
 STATE_TRAIN    = 1
 STATE_SORT     = 2
 STATE_FETCH    = 3
-STATE_FINISH   = 4
+STATE_EXIT     = 4
 STATE_STANDBY  = 5
-STATE_EXIT     = 6
+STATE_FINISH   = 6
 STATE_LISTEN   = 10
+
 
 # global variables
 go = -1 # represents whether state changes are acceptable
@@ -128,14 +129,14 @@ def state_change(msg):
                     send_image(os.path.join(BASE_DIR,file))
 
             elif (state==STATE_TRAIN):
-                if (msg.data=="bottle one "):
+                if (msg.data=="small bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_TRAIN
                     pub_msg.state = state
-                    pub_msg.name = "bottle one"
+                    pub_msg.name = "small bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -144,14 +145,14 @@ def state_change(msg):
                     file = "images/learn_bottle1.png"
                     send_image(os.path.join(BASE_DIR,file))
                 
-                elif (msg.data=="bottle two "):
+                elif (msg.data=="large bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_TRAIN
                     pub_msg.state = state
-                    pub_msg.name = "bottle two"
+                    pub_msg.name = "large bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -312,14 +313,14 @@ def state_change(msg):
                     send_image(os.path.join(BASE_DIR,file))
 
             elif (state==STATE_TRAIN):
-                if (msg.data=="bottle one "):
+                if (msg.data=="small bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_TRAIN
                     pub_msg.state = state
-                    pub_msg.name = "bottle one"
+                    pub_msg.name = "small bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -328,14 +329,14 @@ def state_change(msg):
                     file = "images/learn_bottle1.png"
                     send_image(os.path.join(BASE_DIR,file))
                     
-                elif (msg.data=="bottle two "):
+                elif (msg.data=="large bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_TRAIN
                     pub_msg.state = state
-                    pub_msg.name = "bottle two"
+                    pub_msg.name = "large bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -427,14 +428,14 @@ def state_change(msg):
                 state_prev = state
 
             elif (state==STATE_FETCH):
-                if (msg.data=="bottle one "):
+                if (msg.data=="small bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle one"
+                    pub_msg.name = "small bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -443,14 +444,14 @@ def state_change(msg):
                     file = "images/fetch_bottle1.png"
                     send_image(os.path.join(BASE_DIR,file))
                     
-                elif (msg.data=="bottle two "):
+                elif (msg.data=="large bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle two"
+                    pub_msg.name = "large bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -613,14 +614,14 @@ def state_change(msg):
                 state_prev = state
 
             elif (state==STATE_FETCH):
-                if (msg.data=="bottle one "):
+                if (msg.data=="small bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle one"
+                    pub_msg.name = "small bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -629,14 +630,14 @@ def state_change(msg):
                     file = "images/fetch_bottle1.png"
                     send_image(os.path.join(BASE_DIR,file))
                 
-                elif (msg.data=="bottle two "):
+                elif (msg.data=="large bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle two"
+                    pub_msg.name = "large bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -799,14 +800,14 @@ def state_change(msg):
                 state_prev = state
 
             elif (state==STATE_FETCH):
-                if (msg.data=="bottle one "):
+                if (msg.data=="small bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle one"
+                    pub_msg.name = "small bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
@@ -815,14 +816,14 @@ def state_change(msg):
                     file = "images/fetch_bottle1.png"
                     send_image(os.path.join(BASE_DIR,file))
                     
-                elif (msg.data=="bottle two "):
+                elif (msg.data=="large bottle "):
                     # don't make further state changes until master allows it
                     go = 0
 
                     # update and publish state
                     state = STATE_FETCH
                     pub_msg.state = state
-                    pub_msg.name = "bottle two"
+                    pub_msg.name = "large bottle"
                     pub_msg.done = 0
                     state_pub.publish(pub_msg)
                     state_prev = state
