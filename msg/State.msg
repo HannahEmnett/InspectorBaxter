@@ -11,3 +11,5 @@
 # PickNMove node will send us this value (5) in the state message
 ##
 int32 state
+string object_name
+int32 done

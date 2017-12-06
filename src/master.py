@@ -4,10 +4,10 @@ import numpy as np
 import copy
 import math
 
-from inspector.msg import ObjectName
-from inspector.msg import ObjectList
-from inspector.msg import PclData
-from inspector.msg import State
+from InspectorBaxter.msg import ObjectName
+from InspectorBaxter.msg import ObjectList
+from InspectorBaxter.msg import PclData
+from InspectorBaxter.msg import State
 
 # State definitions
 # 0 - implies the receiver should initialize itself
@@ -33,13 +33,13 @@ class object():
         self.name = name
         self.group_id = group_id
         self.pcl_data_index_list = []
-        
+
     def add_pcl_index(pcl_index):
         self.pcl_data_index_list.append(pcl_index)
-    
+
 #container class for everythang
 class master():
-    
+
     def __init__(self):
         self.state_publisher = rospy.Publisher('/inspector/state',
                                                State, queue_size=10)
@@ -49,11 +49,11 @@ class master():
         rospy.Subscriber('/inspector/state', State, self.state_callback)
         rospy.Subscriber('/inspector/pcl_data', PclData, self.pcl_data_callback)
         rospy.Subscriber('/inspector/naming', ObjectName, self.name_callback)
-        
+
         self.current_state = STATE_INIT
         self.current_obj_index = 0
         self.group_index = 0
-        
+
         # we will see if we need the time and rate stuff later
         #self.start_time = rospy.Time.now().to_sec()
         #self.rate = rospy.Rate(50)
@@ -64,30 +64,30 @@ class master():
         # This is where we store the ordered copy of all the unnamed,
         # ungrouped (by obj type), data received from PCL node
         self.pcl_db = PclData()
-        
+
         rospy.spin()
-        
+
     def send_object_data(self, obj_data):
-    
+
         obj_data.centroids = copy.deepcopy(self.pcl_db.centroids[self.current_obj_index])
         obj_data.heights = copy.deepcopy(self.pcl_db.heights[self.current_obj_index])
         obj_data.widths = copy.deepcopy(self.pcl_db.widths[self.current_obj_index])
         # increment the index into the PclData
         self.current_obj_index += 1
         self.obj_list_publisher.publish(obj_data)
-        
+
     def send_sorted_objects(self, obj_data):
 
         for object in self.obj_db.itervalues():
             for index in object.pcl_data_index_list:
-                obj_data.objects[object.group_id].append(copy.deepcopy(self.pcl_db[index]))  
-            
+                obj_data.objects[object.group_id].append(copy.deepcopy(self.pcl_db[index]))
+
         self.obj_list_publisher.publish(obj_data)
-        
+
     def copy_pcl_data_ordered(self, pcl_data):
 
-        self.pcl_db = copy.deepcopy(sorted(pcl_data.centroids, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))       
-        
+        self.pcl_db = copy.deepcopy(sorted(pcl_data.centroids, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))
+
     def state_callback(self, msg):
         if (self.current_state == STATE_INIT):
             if (msg.state == STATE_TRAIN):
@@ -124,7 +124,7 @@ class master():
             if (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
                 ###
-                # copy state and wait till name of object to be fetched is received 
+                # copy state and wait till name of object to be fetched is received
                 ###
             elif (msg.state == STATE_FINISH):
                 # Can only receive this message from the PickNMove node
@@ -136,17 +136,17 @@ class master():
         else:
             rospy.loginfo("Unknown state Rcvd: %d", msg.state)
             return()
-            
+
     def pcl_data_callback(self, msg):
         if (self.current_state == STATE_TRAIN):
             # Store the incoming data, in a sorted fashion
-            copy_pcl_data_ordered(msg)     
+            copy_pcl_data_ordered(msg)
         else:
             # Ignore incoming PCL data when not in TRAIN state
             return()
 
-        
-    def name_callback(self, msg):        
+
+    def name_callback(self, msg):
         if (self.current_state == STATE_TRAIN):
             # In the TRAIN phase, when a name is received,
             # it needs to be associated with a PCL data
@@ -165,14 +165,14 @@ class master():
                 self.obj_db[msg.object_name] = object(msg.object_name, self.group_index)
                 self.group_index += 1
                 self.obj_db[msg.object_name].add_pcl_index(self.current_obj_index)
-                
+
             # In either case, since we heard the name, send the next object's
             # location to PickNMove
             obj_data = ObjectList()
             obj_data.state = STATE_TRAIN
             obj_data.next = 1
             send_object_data(self, obj_data)
-            
+
         elif (self.current_state == STATE_FETCH):
             if msg.object_name in self.obj_db:
                 # We have already heard this name before so all we need to do
@@ -188,11 +188,11 @@ class master():
                 return()
         else:
            rospy.loginfo("Not expecting a name in the command in this state %d", self.current_state)
-           return()  
+           return()
 
-   
+
 def main():
-    
+
     # Creating our node
     rospy.init_node('master_node')
     master()
@@ -202,4 +202,3 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print ("Shutting Down")
-
