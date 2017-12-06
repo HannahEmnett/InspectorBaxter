@@ -62,7 +62,7 @@ phase 5: standby
 phase 1: training   
 *Note: Must be first after phase 0*   
 - user says "Baxter, learn <object 1 name>"   
-- baxter_speech publishes state=1 and name="<object 1 name>" on State.msg 
+- baxter_speech publishes state=1 and name="<object 1 name>" on State.msg
 - master is updated of training state   
 - master pub pcl_update.msg on i/pcl_req   
 - proc_pc publishes pcldata.msg on i/pcl_data   
@@ -158,8 +158,10 @@ Now, as the user gives commands, our other nodes can subscribe to the `/inspecto
 ## MoveIt Node
 
 #### Overview
-This node contains all of the necessary code for moving Baxter. Utilizing functions from Mike Ferguson's `moveit_python` package (linked [here](https://github.com/mikeferguson/moveit_python)), the node uses path planning, including collision detection, to reach the goal. To run this node, download his package located [here](https://github.com/mikeferguson/moveit_python.git) and save it in the same directory as the package above. 
-
+This node contains all of the necessary code for moving Baxter. Utilizing functions from Mike Ferguson's `moveit_python` package (linked [here](https://github.com/mikeferguson/moveit_python)), the node uses path planning, including collision detection, to reach the goal. To run this node, download his package located [here](https://github.com/mikeferguson/moveit_python.git) and save it in the same directory as the package above. Furthermore, clone this package [here](https://github.com/ros-planning/moveit_robots.git) to use MoveIt! with Baxter. Then to ensure you have MoveIt! installed: 
+```
+>>sudo apt-get install ros-kinetic-moveit
+```
 #### Instructions
 
 First, ensure Baxter starts in the neutral position.
