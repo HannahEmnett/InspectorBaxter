@@ -324,13 +324,13 @@ def sort_loop(data):
                 out=union(np.where(sort_array.c_index == '3')[0],np.where(sort_array.c_index == 'a')[0])
                 g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
 
-    right_gripper.open()
-    g.moveToJointPosition(jts_left,l_neut,plan_only=False)
+        right_gripper.open()
+        g.moveToJointPosition(jts_left,l_neut,plan_only=False)
 
-        out=find_first('nan',prev_sort[0,:])
+        out=find_first(0,prev_sort[0,:])
         prev_sort[0,out]=id_num
-        prev_sort[1,out]=xp
-        prev_sort[2,out]=yp
+        prev_sort[1,out]=heights[q]
+        prev_sort[2,out]=widths[q]
         prev_sort[3,out]=zp
 
     done.done=1
