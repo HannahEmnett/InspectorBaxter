@@ -14,7 +14,7 @@ Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 ### Relevant nodes (not including extra nodes task specific):  
 1. master.py   
     - Sub: i/master_update, i/pcl_data, i/state  
-    - Pub: i/obj_list, i/state   
+    - Pub: i/obj_list, i/state, i/pcl_req 
 2. pick_up.py   
     - Sub: i/obj_list   
     - Pub: i/master_update   
@@ -33,11 +33,11 @@ Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 5. inspector/pcl_req   -pcl_update.msg     
 
 ### Relevant Msgs:
-1. Objectlist.msg (of format: int32 state, int32 next, pcldata objects, int32 obj_index   
-2. Pcldata.msg (of format: point32 centroids, float32 heights, float32 widths, float32 obj_id)   
+1. ObjectList.msg (of format: int32 state, int32 next, pcldata objects, int32 obj_index   
+2. PclData.msg (of format: point32 centroids, float32 heights, float32 widths, float32 obj_id)   
 3. State.msg (of format: int32 state, string name, int32 done)   
-4. update.msg (of format: int8 state, int8 done [0 or 1])   
-5. pcl_update.msg (of format: int8 state)   
+4. Update.msg (of format: int8 state, int8 done)   
+5. Pcl_Update.msg (of format: int8 state)   
 
 ### Phases:
 0- initialize - internal phase   
@@ -45,19 +45,13 @@ Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 2- sorting   
 3- fetching   
 4- shutdown   
-5- standby (waiting on user) -internal phase   
+5- standby - internal phase   
 
 ## Breakdown:
 phase 0: init  
 - User says "Start"
 - Startup procedure for all nodes   
-- Phase immediately updates to 5 (standby) and master.py publishes on state.msg and obj_list.msg to notify of standby   
-
-phase 5: standby   
-- all nodes in idle   
-- Master publishes on i/state and i/obj_list a state of 5   
-- pick_up node moves baxter to “neutral” position (opens gripper first to release object if exiting fetch state)   
-- baxter_speech is listening   
+- Phase immediately updates to 5 (standby) and master.py publishes on state.msg and obj_list.msg to notify of standby      
 
 phase 1: training   
 *Note: Must be first after phase 0*   
@@ -103,7 +97,13 @@ phase 3: fetch
 phase 4: shutdown   
 - User says either "Shut down", "Exit", or "Stop"   
 - baxter_speech pub state=4 on i/state   
-- master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral   
+- master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral 
+
+phase 5: standby   
+- all nodes in idle   
+- Master publishes on i/state and i/obj_list a state of 5   
+- pick_up node moves baxter to “neutral” position (opens gripper first to release object if exiting fetch state)   
+- baxter_speech is listening
 
 ## Master Node
 
