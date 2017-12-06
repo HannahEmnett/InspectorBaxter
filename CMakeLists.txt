@@ -25,10 +25,10 @@ add_definitions(${PCL_DEFINITIONS})
 add_message_files(DIRECTORY msg
   FILES
   ObjectList.msg
-  Update.msg
-  Pcl_Update.msg
   PclData.msg
+  Pcl_Update.msg
   State.msg
+  Update.msg
 )
 
 generate_messages(
