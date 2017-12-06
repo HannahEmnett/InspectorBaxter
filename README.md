@@ -4,6 +4,12 @@ ME495- Embedded Systems in Robotics Final Project
 ## Group Members
 Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 
+## Package Structure Overview
+`src`: contains the `baxter_speech.py`, `pick_up.py`, `cluster_extracter.cpp`, and `master.py`   
+`msg`: contains `PclData.msg`, `ObjectList.msg`, `State.msg`, `Update.msg`, `Pcl_Update.msg`   
+`launch`: contains `move_baxter.launch`, `baxter_speech.launch`, `pcl_extract.launch`, and `master_launch.launch`
+`images` and `vocab`: contains images to be displayed to Baxter's screen and contains the necessary vocab for `pocketsphinx`
+
 ## Overview of Functionality
 ### Relevant nodes (not including extra nodes task specific):  
 1. master.py   
