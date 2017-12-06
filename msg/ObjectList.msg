@@ -25,14 +25,14 @@ int32     next      # This is actually a boolean that indicates whether
 # match
 ##
 
-inspector/PclData[] objects # Array of Arrays.
+inspector/PclData[] objects # Array of PclData.
 ##
 # This field is used by PickNMove as an index into its local store when a
 # fetch command is issued on an object type
 # The index values between local copies of master node and PickNMove node have
 # to match
 ##
-int32      obj_index
+int32[]      obj_index
 
 
 
