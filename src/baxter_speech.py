@@ -28,9 +28,10 @@ STATE_INIT      = 0
 STATE_TRAIN     = 1
 STATE_SORT      = 2
 STATE_FETCH     = 3
-STATE_EXIT      = 4
+STATE_FINISH    = 4
 STATE_STANDBY   = 5
-STATE_LISTEN    = 6
+STATE_EXIT      = 6
+STATE_LISTEN    = 10
 
 # global variables
 go = -1 # represents whether state changes are acceptable
