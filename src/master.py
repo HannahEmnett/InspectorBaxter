@@ -34,28 +34,24 @@ STATE_EXIT     = 4
 STATE_STANDBY  = 5
 STATE_FINISH   = 6
 
-HW_RATIO_RANGE_MIN = 0.01
-HW_RATIO_RANGE_MIN = 0.02
+RATIO_RANGE_MIN = 0.01
+RATIO_RANGE_MIN = 0.02
 
-class Pcl():
-    def __init__(x, y, z, h, w, r):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.h = h
-        self.w = w
-        self.r = r
-            
 class Object():
     def __init__(self):
         self.name = None
         self.group_id = 0
-        self.hw_ratio = 0
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        self.h = 0
+        self.w = 0
+        self.r = 0
+        self.id = 0
         self.pcl = None
-    def add_pcl_data(self, pcl_data):
-        self.hw_ratio = pcl.r
+    def add_pcl_data(self, pcl):
         self.pcl = copy.deepcopy(pcl)
-    def associate_obj_name(self, name):
+    def associate_name(self, name):
         self.name = name
     def associate_group_id(self, group_id):
         self.group_id = group_id
@@ -63,7 +59,7 @@ class Object():
 def in_range(hw_ratio, group_ids):
     i = 0
     for ratio in group_ids:
-        if HW_RATIO_RANGE_MIN <= abs(hw_ratio - ratio) and abs(hw_ratio - ratio) <= HW_RATIO_RANGE_MAX:
+        if abs(hw_ratio - ratio) <= 0.02:
             return i
         i += 1
     return None
@@ -79,13 +75,15 @@ class Master():
                                                   ObjectList, queue_size=10)
         self.pcl_req_publisher = rospy.Publisher('/inspector/pcl_req',
                                                  Pcl_Update, queue_size=10)
-
+        # dont forget to remove this before the integration
+        self.update_publisher = rospy.Publisher('/inspector/master_update',
+                                                 Update, queue_size=10)
         rospy.Subscriber('/inspector/state', State, self.state_callback)
-        rospy.Subscriber('/inspector/master_update', Update,
-                         self.update_callback)
+        rospy.Subscriber('/inspector/master_update', Update, self.update_callback)
         rospy.Subscriber('/pclData', PclData,
                          self.get_pcl_data)
 
+        self.first = True
         self.current_obj_index = 0
         self.group_index = 0
         self.current_state = STATE_INIT
@@ -98,22 +96,24 @@ class Master():
         state_msg = State()
         state_msg.state = STATE_STANDBY
         self.state_publisher.publish(state_msg)
-
         rospy.spin()
-        
+
+    
     def done_with_training(self):
-        return (len(self.pcl_ordered_list)-1 == self.current_obj_index)
+        return (len(self.objects) == self.current_obj_index + 1)
         
     def cleanup_all_data(self):
         self.current_obj_index = 0
         self.group_index = 0
         self.objects = []
         self.pcl_ordered_list = []
+        self.first = True
         
-    def send_object_data(self, obj_data):
-        obj_data.centroid = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].centroid)
-        obj_data.height = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].height)
-        obj_data.width = copy.deepcopy(self.pcl_ordered_list[self.current_obj_index].width)
+    def send_object_data(self, name, obj_data):
+        for object in self.objects:
+            if object.id == self.current_obj_index:
+                obj_data.objects.append(object.pcl)
+                
         # increment the index into the PclData
         self.current_obj_index += 1
         self.obj_list_publisher.publish(obj_data)
@@ -121,24 +121,39 @@ class Master():
     def send_sorted_objects(self, obj_data):
         for object in self.objects:
             obj_data.objects.append(object.pcl)
-            obj_data.obj_index.append(object.group_id)
-        self.obj_list_publisher.publish(obj_data)
-
+            obj_data.obj_index.append(object.group_id)            
+            self.obj_list_publisher.publish(obj_data)
+        
     def copy_pcl_data_ordered(self, pcl_data):
         # First copy the data in a proximity from origin order 
         #self.pcl_ordered_list = copy.deepcopy(sorted(pcl_data.centroid, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))
         self.pcl_ordered_list = copy.deepcopy(pcl_data)
         # Now associate a groupId with them
 
-        '''
-        for i in range (4):
-            print "x = {}, y = {}, z = {}, h = {}, w = {}, r = {}".format(pcl_data.centroid[i].x, pcl_data.centroid[i].y, pcl_data.centroid[i].z,pcl_data.height[i],pcl_data.width[i],pcl_data.ratio[i])
-        '''
-        
-        for i in range(len(list(pcl_data[:].height))):
+        print pcl_data.centroid
+        i = 0
+        for (centroid, height, width, ratio) in zip(pcl_data.centroid, pcl_data.height, pcl_data.width, pcl_data.ratio):
             object = Object()
-            pcl = Pcl(pcl_data[i].centroid.x, pcl_data[i].centroid.y, pcl_data[i].centroid.z, pcl_data[i].height, pcl_data[i].weight, pcl_data[i].ratio)
+            object.x = centroid.x
+            object.y = centroid.y
+            object.z = centroid.z
+            object.h = height
+            object.w = width
+            object.r = ratio
+            object.id = i
+            print "id = {}, x = {}, y = {}, z = {}, h = {}, w = {}, r = {}".format(object.id, object.x, object.y, object.z, object.h, object.w, object.r)
+            pcl = PclData()
+            pt = Point()
+            pt.x = centroid.x
+            pt.y = centroid.y
+            pt.z = centroid.z
+            pcl.centroid.append(pt)
+            pcl.height.append(height)
+            pcl.width.append(width)
+            pcl.ratio.append(ratio)
             object.add_pcl_data(pcl)
+            object.id = i
+            i += 1
             self.objects.append(object)
 
         group_ids = []
@@ -146,19 +161,21 @@ class Master():
         i = 0
         for object in self.objects:
             if first:
-                group_ids.append(object.hw_ratio)
+                group_ids.append(object.r)
                 object.associate_group_id(i)
+                print "Associating group_id {} with object id {}".format(i, object.id)
                 first = False
                 i += 1
                 continue
-                
-            id = in_range(object.hw_ratio, group_ids)
+            id = in_range(object.r, group_ids)
             if id is None:
-                group_ids.append(object.hw_ratio)
+                group_ids.append(object.r)
                 i += 1
                 object.associate_group_id(i)
+                print "Associating group_id {} with object id {}".format(i, object.id)
             else:
                 object.associate_group_id(id)
+                print "Associating group_id {} with object id {}".format(id, object.id)
                 
     def state_callback(self, msg):
         print "state_callback in state {} with new state {}".format(self.current_state, msg.state)
@@ -175,12 +192,14 @@ class Master():
                 ###
                 obj_data = ObjectList()
                 obj_data.state = STATE_TRAIN
-                send_object(self, msg.name, obj_data)
+                self.send_object_data(msg.name, obj_data)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_EXIT):
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data(self)
+                cleanup_all_data()
                 self.state_publisher.publish(state_msg)
             else:
                 print "wrong state Rcvd: {}, current state {}".format(msg.state, self.current_state )
@@ -194,6 +213,8 @@ class Master():
                 obj_data = ObjectList()
                 obj_data.state = STATE_SORT
                 send_sorted_objects(self, obj_data)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_TRAIN):
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
@@ -205,13 +226,17 @@ class Master():
                 ###
                 obj_data = ObjectList()
                 obj_data.state = STATE_TRAIN
-                send_object(self, msg.name, obj_data)
+                self.send_object_data(msg.name, obj_data)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
                 self.fetch_object(msg.name)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
                 state_msg.state = STATE_STANDBY
@@ -221,7 +246,7 @@ class Master():
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data(self)
+                cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -233,6 +258,8 @@ class Master():
             if (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
                 self.fetch_object(msg.name)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
                 state_msg.state = STATE_STANDBY
@@ -242,7 +269,7 @@ class Master():
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data(self)
+                cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -258,11 +285,13 @@ class Master():
                 state_msg.state = STATE_STANDBY
                 state_msg.done = True
                 self.state_publisher.publish(state_msg)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_EXIT):
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data(self)
+                cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -275,7 +304,8 @@ class Master():
             return()
 
     def get_pcl_data(self, pcl_data):
-        if self.current_state == STATE_INIT:
+        if self.first:
+            self.first = False
             # Store the incoming data, in a sorted fashion
             print "pcl_data_callback in state {}".format(self.current_state)
             self.copy_pcl_data_ordered(pcl_data)     
@@ -305,17 +335,19 @@ class Master():
         # phase, this should not be happening
         print "Uknown object name {} in state {}".format(msg.name, self.current_state)
         return()
-                                        
+                        
     def handle_naming(self, name):
         print "name {} in state {}".format(name, self.current_state)
-        self.objects[self.current_obj_index].associate_name(self.objects[self.current_obj_index], name)
+        for object in self.objects:
+            if object.id == self.current_obj_index:
+                object.associate_name(name)
         # In either case, since we heard the name, send the next object's
         # location to PickNMove
         obj_data = ObjectList()
         obj_data.state = STATE_TRAIN
         if self.current_obj_index != 0:
             obj_data.next = 1
-        send_object_data(self, obj_data)
+        self.send_object_data(name, obj_data)
         
 def main():
 
