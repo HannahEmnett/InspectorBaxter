@@ -48,6 +48,7 @@ global pos2
 global pos3
 global prev_state
 global prev_jts
+global back
 
     
 #states 0-startup, 1-train, 2-sort, 3-fetch, 4-shutdown 5-standby
@@ -131,7 +132,7 @@ def standby():
         a.moveToJointPosition(jts_all,last_joints, plan_only=False)
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
-        a.moveToJointPosition(jts_right, neutral, plan_only=False)
+        a.moveToJointPosition(jts_right,neutral,plan_only=False)
     elif prev_state == 3:
         right_gripper.open()
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
@@ -150,6 +151,7 @@ def train_loop(data):
     global neutral
     global up
     global prev_state
+    global back
     done=Update()
     prev_sort = np.zeros((4,10))
 
@@ -169,8 +171,8 @@ def train_loop(data):
         a.moveToJointPosition(jts_all,last_joints, plan_only=False)
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
-        a.moveToJointPosition(jts_right, neutral, plan_only=False)
-
+        a.moveToJointPosition(jts_right,neutral,plan_only=False)
+        
     # Clear planning scene
     p.clear()
     # Add table as attached object
@@ -203,6 +205,7 @@ def train_loop(data):
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
     time.sleep(0.5)
+    last_joints2=[]
     while len(last_joints2)<2:
         temp = rospy.wait_for_message("/robot/joint_states", JointState)
         joints=temp.position
@@ -220,15 +223,15 @@ def train_loop(data):
     goal.pose.orientation.z = 0.0
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
-   
-    
-    right_gripper.close()
+
+    last_joints=[]
     time.sleep(0.5)
     while len(last_joints)<2:
         temp = rospy.wait_for_message("/robot/joint_states", JointState)
         joints=temp.position
         last_joints =copy.deepcopy(joints)
     print(last_joints)
+    right_gripper.close()
 
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
@@ -305,6 +308,7 @@ def fetch_loop(data):
     a.moveToJointPosition(jts_right, up, plan_only=False)
     time.sleep(1)
     right_gripper.open()
+    a.moveToJointPosition(jts_all,back,plan_only=False)
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
     done.state=3
@@ -570,6 +574,7 @@ if __name__=='__main__':
     pos2=[-0.0015339807878854137, 1.7629274204773118, -0.4843544337748194, 0.09203884727312482, -2.9061266026489165, 1.8871798642960302, 0.04180097646987752]
     pos3=[-0.019941750242510378, 1.5811506971128901, -0.20555342557664544, 0.15761652595522627, -2.6499518110720524, 1.7786507235531372, 0.09050486648523941]
     l_neut=[-0.019558255045539024, 0.896228275322053, -0.14841264122791378, 0.27228158984966094, -2.657238219814508, 1.28355842426312, -0.298359263243713]
+    back=[0.0, 0.02339320701525256, -0.0003834951969713534, 1.4012914497333255, -0.004985437560627594, 0.04065049087896346, 0.004218447166684887, 0.20747090156150222, -0.0019174759848567672, 0.12003399665203363, 2.4482333374651204, 0.839854481367264, -0.8950777897311389, 0.0, -1.5707963267946636, -0.08820389530341129, -12.565987119160338]
     p = PlanningSceneInterface("base")
     g = MoveGroupInterface("left_arm", "base")
     a= MoveGroupInterface("right_arm", "base")
