@@ -178,7 +178,7 @@ First, ensure Baxter starts in the neutral position. Next, if you are only tryin
 >>rosrun inspector move_neutral.py
 >>roslaunch inspector move_baxter.launch
 ```
-This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then ```rosrun baxter_tools enable_robot.py -d`. 
+This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`. 
 
 ## Putting it all together
 
