@@ -31,5 +31,5 @@ def trans_points(data):
 
 if __name__ == '__main__':
     rospy.init_node("pcl_transform")
-    rospy.Subscriber("inspector/test",PclData, trans_points)
+    rospy.Subscriber("pclData",PclData, trans_points)
     rospy.spin()
