@@ -3,6 +3,7 @@ import rospy
 import numpy as np
 from math import pi, sin, cos
 from inspector.msg import PclData
+from geometry_msgs.msg import Point
 
 def trans_points(data):
     pub = rospy.Publisher("inspector/pclData2", PclData, queue_size = 10)
@@ -11,23 +12,24 @@ def trans_points(data):
     kin_loc=np.array([[2],[-0.4],[0],[1]])
     #bot_loc=np.array([[0],[0.05],[1],[1]])
     out=PclData()
-    for i in range(1,len()):
-        bot_loc=[[float(data.centroid[i].x)],[float(data.centroid[i].y)],[float(data.centroid[i].z)]]
+    cent=Point()
+    arr=[]
+    for i in range(1,len(data.height[:])-2):
+        exact=data.centroid
+        bot_loc=np.array([[float(exact[i-1].x)],[float(exact[i-1].y)],[float(exact[i-1].z)],[1]])
         kinect_to_bottle=rotx.dot(roty.dot(bot_loc))
         baxter_to_bottle=kinect_to_bottle+kin_loc
-        out.height[i]=data.height[i]
-        out.width[i]=data.width[i]
-        out.ratio[i]=data.ratio[i]
-        out.centroid[i].x=float(baxter_to_bottle[0])
-        out.centroid[i].y=float(baxter_to_bottle[1])
-        out.centroid[i].z=float(baxter_to_bottle[2])
-        pub.publish(out)
+        cent.x=float(baxter_to_bottle[0])
+        cent.y=float(baxter_to_bottle[1])
+        cent.z=float(baxter_to_bottle[2])
+        arr.append(cent)
+    out.centroid=arr
+    out.height=data.height
+    out.width=data.width
+    out.ratio=data.ratio
+    pub.publish(out)
 
 if __name__ == '__main__':
     rospy.init_node("pcl_transform")
-<<<<<<< HEAD
-    rospy.Subscriber("inspector/pclData",PclData, trans_points
-=======
-    rospy.Subscriber("pclData",PclData, trans_points)
->>>>>>> f93271bbb206b6045a63c4ef5d21d1f989b423a6
+    rospy.Subscriber("inspector/test",PclData, trans_points)
     rospy.spin()
