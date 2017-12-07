@@ -14,7 +14,7 @@ Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 ### Relevant nodes (not including extra nodes task specific):  
 1. master.py   
     - Sub: i/master_update, i/pcl_data, i/state  
-    - Pub: i/obj_list, i/state, i/pcl_req 
+    - Pub: i/obj_list, i/state, i/pcl_req
 2. pick_up.py   
     - Sub: i/obj_list   
     - Pub: i/master_update   
@@ -97,7 +97,7 @@ phase 3: fetch
 phase 4: shutdown   
 - User says either "Shut down", "Exit", or "Stop"   
 - baxter_speech pub state=4 on i/state   
-- master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral 
+- master pub on i/obj_list and i/pcl_req and i/state so all nodes know to close out and return baxter to neutral
 
 phase 5: standby   
 - all nodes in idle   
@@ -147,7 +147,80 @@ Now, as the user gives commands, our other nodes can subscribe to the `/inspecto
 `inspector/naming` topics in order to do object identification and manipulation!
 
 
-## PCL Node
+## Computer Vision Component
+### Packages Used
+* [`perception_pcl`](https://github.com/ros-perception/perception_pcl.git) (kinetic-devel branch)
+* [`openni2_camera`](https://github.com/ros-drivers/openni2_camera) (indigo-devel branch)
+* [`rqt_reconfigure`](https://github.com/ros-visualization/rqt_reconfigure.git) (optional, used mostly for debugging)
+
+*This [Github repository](https://github.com/NU-MSR/nodelet_pcl_demo) was used as a framework to build the CV components of this project.*
+
+### Overview
+1. An [ASUS XtionPRO LIVE](https://www.asus.com/us/3D-Sensor/Xtion_PRO_LIVE/) is used to view Baxter's environment. This sensor was chosen over other depth sensing devices like the Kinect because of its relative ease of use with computers. Point cloud locations and the centroid of each object is published to a topic that the `master.py` node subscribes to.
+
+2. This part of the project extensively uses `perception_pcl` to compute multiple point clouds of various objects on the table. The [`pcl_extract.launch`](launch/pcl_extract.launch) file reads in raw point cloud data from the XtionPRO and filters it to a more manageable dataset. The [cluster_extractor.cpp] node takes the filtered point cloud data and extracts point clusters. Finally, the centroid, height, width, and width:height ratio are computed and published on the `/pclData` topic. From there, the [`pcl_transform.py`](src/pcl_transform.py) node transforms the centroid values to Baxter's frame of reference and publishes the points to the `/pclData2` topic.
+
+### Running the Code
+*Make sure all required packages are properly installed and the XtionPRO LIVE is pluged in!*
+```
+$ sudo apt-get install ros-kinetic-perception-pcl ros-kinetic-rqt-reconfigure
+<add openni2_camera package to your workspace>
+```
+
+To start the sensor, use the following command:
+```
+$ roslaunch openni2_launch openni2.launch
+```
+In another terminal, run the following command to launch the node:
+```
+$ roslaunch cv_inspector_baxter pcl_extract.launch
+```
+**NOTE:** The second command takes two arguments: `show_pcl` and `gui` which both have default value of "false." To view the extracted point clouds, set `show_pcl` to "true". Set `gui` to "true" to change point cloud filtering parameters in real time.
+
+### Setting Up the XtionPRO LIVE
+1. Clone `openni2_camera` package (link is above) and run `catkin_make` from your workspace directory.
+2. Connect the device to start publishing to the `/camera` topics:
+```
+roslaunch openni2_launch openni2.launch
+rosrun rviz rviz
+```
+3. In `rviz`, add a new **PointCloud2** display. Within the display properties, set your topic (either `/camera/depth/points` or `/camera/depth_registered/points`). This should display a depth image of all the camera's field of view. Change your view parameters to the following:
+```
+Yaw: Pi (or something close enough)
+Pitch: 0
+Focal Point (X,Y,Z): (0,0,0)
+```
+
+**NOTE** The actual code uses the rviz configuration found [here](rviz/rvizConfig).
+
+*See this [tutorial](https://github.com/IntelligentRoboticsLab/KukaYouBot/wiki/Pattern-recognition-with-3D-Cameras-Microsoft-Kinect-&-ASUS-Xtion-PRO-LIVE) for more information on setting up the sensor.*
+
+### Extracting Point Clouds and Their Locations
+To filter out unwanted points, `perception_pcl` makes use of several *nodelets* that can be easily implemented in a launch file.
+
+* **CropBox** filters out any points that are not within a specified volume. This filter was used to remove any points outside of the table with objects on it.
+
+* **VoxelGrid** down-samples a set of points by averaging the points within a specified unit volume into a single point. This filter reduces the resolution of the data, making data processing less computationally intensive.
+
+* **StatisticalOutlierRemoval** removes any random stray points to produce cleaner data.
+
+The filtered data is then passed to a [node](src/cluster_extractor.cpp) that extracts clusters of point clouds. The node is hard coded to look for a maximum of 3 clusters since anything morewould be difficult for Baxter to reach given our setup. *See this [tutorial](http://pointclouds.org/documentation/tutorials/cluster_extraction.php#cluster-extraction) for information on the cluster extraction method.*
+
+
+Data is published on a custom [message](msg/PclData.msg) that has the structure:
+```
+int32 id
+float32 height
+float32 width
+float32 ratio
+geometry_msgs/Point centroid
+```
+To get height and width, the maximum and minimum points along the XtionPRO's x and y axes were computed for every indexed point cluster.
+
+
+### Working with Extracted Point Cloud Data
+Once the objects have been identified, another [node]() creates an averaged approximation of each object's height, width, and centroid. This reduces the chance of using an inaccurate data point when Baxter goes to reach for an object.
+
 
 #### Overview
 
@@ -158,16 +231,16 @@ Now, as the user gives commands, our other nodes can subscribe to the `/inspecto
 ## MoveIt Node
 
 #### Overview
-This node contains all of the necessary code for moving Baxter. Utilizing functions from Mike Ferguson's `moveit_python` package (linked [here](https://github.com/mikeferguson/moveit_python)), the node uses path planning, including collision detection, to reach the goal. To run this node, download his package and save it in the same directory as the package above. Furthermore, clone this package [here](https://github.com/ros-planning/moveit_robots.git) to use MoveIt! with Baxter. Then to ensure you have MoveIt! installed: 
+This node contains all of the necessary code for moving Baxter. Utilizing functions from Mike Ferguson's `moveit_python` package (linked [here](https://github.com/mikeferguson/moveit_python)), the node uses path planning, including collision detection, to reach the goal. To run this node, download his package and save it in the same directory as the package above. Furthermore, clone this package [here](https://github.com/ros-planning/moveit_robots.git) to use MoveIt! with Baxter. Then to ensure you have MoveIt! installed:
 ```
 >>sudo apt-get install ros-kinetic-moveit
 ```
 Next, open `~/catkin_ws/src/moveit_robots/baxter/baxter_moveit_config/launch/demo_baxter.launch`. About five lines down, change the default of the electric grippers so they are both "True" as shown below.
 ``` HTML
 <arg name="right_electric_gripper" default="true"/>
-<arg name="left_electric_gripper" default="true"/> 
+<arg name="left_electric_gripper" default="true"/>
 ```
-Finally, install all of the baxter folders located [here](https://github.com/RethinkRobotics), specifically the following folders: baxter, baxter_common, baxter_examples, baxter_interface, baxter_tools. Instructions for setting up the workstation for Baxter can be found [here](http://sdk.rethinkrobotics.com/wiki/Workstation_Setup). Everything was done on Unbuntu 16.04 and ROS kinetic distro. 
+Finally, install all of the baxter folders located [here](https://github.com/RethinkRobotics), specifically the following folders: baxter, baxter_common, baxter_examples, baxter_interface, baxter_tools. Instructions for setting up the workstation for Baxter can be found [here](http://sdk.rethinkrobotics.com/wiki/Workstation_Setup). Everything was done on Unbuntu 16.04 and ROS kinetic distro.
 
 You are now prepared to move Baxter!
 
@@ -178,10 +251,7 @@ First, ensure Baxter starts in the neutral position. Next, if you are only tryin
 >>rosrun inspector move_neutral.py
 >>roslaunch inspector move_baxter.launch
 ```
-This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`. 
-
-## Putting it all together
-
+This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`.
 
 
 [baxter_speech]: https://github.com/weatherman03/baxter_speech
