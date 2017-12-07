@@ -64,14 +64,10 @@ class Master():
                                                State, queue_size=10)
         self.obj_list_publisher = rospy.Publisher('/inspector/obj_list',
                                                   ObjectList, queue_size=10)
-        self.pcl_req_publisher = rospy.Publisher('/inspector/pcl_req',
-                                                 Pcl_Update, queue_size=10)
-        # dont forget to remove this before the integration
-        self.update_publisher = rospy.Publisher('/inspector/master_update',
-                                                 Update, queue_size=10)
         rospy.Subscriber('/inspector/state', State, self.state_callback)
-        rospy.Subscriber('/inspector/master_update', Update, self.update_callback)
-        rospy.Subscriber('/pclData', PclData,
+        rospy.Subscriber('/inspector/master_update', Update,
+                         self.update_callback)
+        rospy.Subscriber('/inspector/pclData2', PclData,
                          self.get_pcl_data)
 
         self.num_objects = 0
@@ -162,15 +158,6 @@ class Master():
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
                 self.handle_naming(msg.name)
-                ###
-                # copy state and send object data for the first object only
-                # We will send the object data for others once we receive names
-                ###
-                obj_data = ObjectList()
-                obj_data.state = STATE_TRAIN
-                self.send_object_data(msg.name, obj_data)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_EXIT):
                 self.current_state = STATE_INIT
                 state_msg = State()
@@ -189,30 +176,17 @@ class Master():
                 obj_data = ObjectList()
                 obj_data.state = STATE_SORT
                 self.send_sorted_objects(obj_data)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_TRAIN):
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
                 self.handle_naming(msg.name)
-                ###
-                # copy state and send object data for the first object only
-                # We will send the object data for others once we receive names
-                ###
-                obj_data = ObjectList()
-                obj_data.state = STATE_TRAIN
-                self.send_object_data(msg.name, obj_data)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
                 self.fetch_object(msg.name)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
                 state_msg.state = STATE_STANDBY
@@ -234,8 +208,6 @@ class Master():
             if (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
                 self.fetch_object(msg.name)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_FINISH):
                 state_msg = State()
                 state_msg.state = STATE_STANDBY
@@ -261,8 +233,6 @@ class Master():
                 state_msg.state = STATE_STANDBY
                 state_msg.done = True
                 self.state_publisher.publish(state_msg)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_SORT):
                 self.current_state = STATE_SORT
                 ###
@@ -271,8 +241,6 @@ class Master():
                 obj_data = ObjectList()
                 obj_data.state = STATE_SORT
                 self.send_sorted_objects(obj_data)
-                update = Update()
-                self.update_publisher.publish(update)
             elif (msg.state == STATE_EXIT):
                 self.current_state = STATE_INIT
                 state_msg = State()
