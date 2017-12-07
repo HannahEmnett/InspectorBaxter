@@ -83,7 +83,7 @@ class Master():
         rospy.Subscriber('/pclData', PclData,
                          self.get_pcl_data)
 
-        self.first = True
+        self.num_objects = 0
         self.current_obj_index = 0
         self.group_index = 0
         self.current_state = STATE_INIT
@@ -107,7 +107,7 @@ class Master():
         self.group_index = 0
         self.objects = []
         self.pcl_ordered_list = []
-        self.first = True
+        self.num_objects = 0
         
     def send_object_data(self, name, obj_data):
         for object in self.objects:
@@ -124,13 +124,16 @@ class Master():
             obj_data.obj_index.append(object.group_id)            
             self.obj_list_publisher.publish(obj_data)
         
-    def copy_pcl_data_ordered(self, pcl_data):
+    def copy_pcl_data_ordered(self, msg):
         # First copy the data in a proximity from origin order 
         #self.pcl_ordered_list = copy.deepcopy(sorted(pcl_data.centroid, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))
-        self.pcl_ordered_list = copy.deepcopy(pcl_data)
+        pcl_data = copy.deepcopy(msg)
+        self.pcl_ordered_list = pcl_data
         # Now associate a groupId with them
 
-        print pcl_data.centroid
+        print pcl_data.ratio
+        for (ratio) in zip(pcl_data.ratio):
+            print "r = {}".format(ratio)
         i = 0
         for (centroid, height, width, ratio) in zip(pcl_data.centroid, pcl_data.height, pcl_data.width, pcl_data.ratio):
             object = Object()
@@ -303,12 +306,11 @@ class Master():
             print "Unknown state Rcvd: {}".format(msg.state)
             return()
 
-    def get_pcl_data(self, pcl_data):
-        if self.first:
-            self.first = False
+    def get_pcl_data(self, msg):
+        if self.num_objects <= 3:
             # Store the incoming data, in a sorted fashion
             print "pcl_data_callback in state {}".format(self.current_state)
-            self.copy_pcl_data_ordered(pcl_data)     
+            self.copy_pcl_data_ordered(msg)     
 
     def update_callback(self, msg):
         print "update_callback in state {}".format(self.current_state)
