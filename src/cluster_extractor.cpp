@@ -158,10 +158,10 @@ public:
                     float width = xmax-xmin;
                     float ratio = width/height;
                     //push height, width, ratio to output message
-		    pclData.height[j] = height;
-		    pclData.width[j] = width;
-		    pclData.ratio[j] = ratio;
-		    
+                    pclData.height = height;
+                    pclData.width = width;
+                    pclData.ratio = ratio;
+
                     //pclData.height.push_back(height);
                     //pclData.width.push_back(width);
                     //pclData.ratio.push_back(ratio);
@@ -169,8 +169,9 @@ public:
                     pt2.x = centroid(0);
                     pt2.y = centroid(1);
                     pt2.z = centroid(2);
-		    // pclData.centroid.push_back(pt2);
-		    pclData.centroid[j] = pt2;
+                    // pclData.centroid.push_back(pt2);
+                    pclData.centroid = pt2;
+                    pclData.id = j;
                     pclData_pub.publish(pclData);
 
                     // let's send transforms as well:
