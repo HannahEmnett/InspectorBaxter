@@ -100,15 +100,16 @@ def standby():
 def train_loop(data):
     #initializations
     done=Update()
-    prev_sort=[]
+    prev_sort = np.zeros((4,10))
 
     #unpack the message (arrays of object positions)
-    xpos= data.objects.centroids.x
-    ypos=data.objects.centroids.y
-    zpos=data.objects.centroids.z
-    heights=data.objects.heights
-    widths=data.objects.widths
-    num=data.obj_index
+    for i in range(1,len(data.objects.height)):
+        xpos[i]=data[2][0]
+        ypos[i]=data.objects.centroid[i].y
+        zpos[i]=data.objects.centroid[i].z
+        heights=data.objects.height[i]
+        widths=data.objects.width[i]
+        num=data.obj_index[i]
 
     if data.next == 1:
         a.moveToJointPosition(jts_all,joints, plan_only=False)
@@ -124,9 +125,9 @@ def train_loop(data):
     yn = ypos[0]
     zn = zpos[0]
 
-    last_obj_x=xn
-    last_obj_y=yn
-    last_obj_z=zn
+    #last_obj_x=xn
+    #last_obj_y=yn
+    #last_obj_z=zn
 
     #Add all items to collision scene
     objlist = ['obj1', 'obj2', 'obj3']
@@ -167,12 +168,13 @@ def fetch_loop(data):
     done=Update()
 
     #unpack the message (arrays of object positions)
-    xpos= data.objects.centroids.x
-    ypos=data.objects.centroids.y
-    zpos=data.objects.centroids.z
-    heights=data.objects.heights
-    widths=data.objects.widths
-    num=data.obj_index
+    for i in range(1,len(data.objects.height)):
+        xpos[i]=data.objects.centroid[i].x
+        ypos[i]=data.objects.centroid[i].y
+        zpos[i]=data.objects.centroid[i].z
+        heights=data.objects.height[i]
+        widths=data.objects.width[i]
+        num=data.obj_index[i]
 
     # Clear planning scene
     p.clear()
@@ -227,19 +229,18 @@ def sort_loop(data):
     done=Update()
 
     #unpack the message (arrays of object positions)
-    xpos= data.objects.centroids.x
-    ypos=data.objects.centroids.y
-    zpos=data.objects.centroids.z
-    heights=data.objects.heights
-    widths=data.objects.widths
-    num=data.obj_index
+    for i in range(1,len(data.objects.height)):
+        xpos[i]=data.objects.centroid[i].x
+        ypos[i]=data.objects.centroid[i].y
+        zpos[i]=data.objects.centroid[i].z
+        heights=data.objects.height[i]
+        widths=data.objects.width[i]
+        num=data.obj_index[i]
 
     # Clear planning scene
     p.clear()
     # Add table as attached object
     p.attachBox('table', 0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
-
-
 
     place=PoseStamped()
     place.header.frame_id = "base"
@@ -513,7 +514,7 @@ if __name__=='__main__':
     jts_left = ['left_e0', 'left_e1', 'left_s0', 'left_s1', 'left_w0', 'left_w1', 'left_w2']
     jts_right = ['right_e0', 'right_e1', 'right_s0', 'right_s1', 'right_w0', 'right_w1', 'right_w2']
     jts_all=['head_nod', 'head_pan', 'left_e0', 'left_e1', 'left_s0', 'left_s1', 'left_w0', 'left_w1', 'left_w2', 'right_e0', 'right_e1', 'right_s0', 'right_s1', 'right_w0', 'right_w1', 'right_w2', 'torso_t0']
-    prev_sort = np.zeros((4,10))
+
     #prev_sort=[float('nan') for x in range(10)] for y in range(4)]
     #Going to neutral and then getting into position
     rospy.loginfo("Getting into position...")
