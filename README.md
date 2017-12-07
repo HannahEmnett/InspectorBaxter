@@ -193,7 +193,7 @@ Pitch: 0
 Focal Point (X,Y,Z): (0,0,0)
 ```
 
-**NOTE** The actual code uses the rviz configuration found [here](rviz/rvizConfig).
+**NOTE** The actual code uses the rviz configuration found [here](rviz/rvizConfig.rviz).
 
 *See this [tutorial](https://github.com/IntelligentRoboticsLab/KukaYouBot/wiki/Pattern-recognition-with-3D-Cameras-Microsoft-Kinect-&-ASUS-Xtion-PRO-LIVE) for more information on setting up the sensor.*
 
@@ -206,7 +206,7 @@ To filter out unwanted points, `perception_pcl` makes use of several *nodelets* 
 
 * **StatisticalOutlierRemoval** removes any random stray points to produce cleaner data.
 
-The filtered data is then passed to a [node](src/cluster_extractor.cpp) that extracts clusters of point clouds. The node is hard coded to look for a maximum of 3 clusters since anything morewould be difficult for Baxter to reach given our setup. *See this [tutorial](http://pointclouds.org/documentation/tutorials/cluster_extraction.php#cluster-extraction) for information on the cluster extraction method.*
+The filtered data is then passed to a [node](src/cluster_extractor.cpp) that extracts clusters of point clouds. The node is hard coded to look for a maximum of 3 clusters since anything more would be difficult for Baxter to reach given our setup. *See this [tutorial](http://pointclouds.org/documentation/tutorials/cluster_extraction.php#cluster-extraction) for information on the cluster extraction method.*
 
 
 Data is published on a custom [message](msg/PclData.msg) that has the structure:
@@ -217,12 +217,7 @@ float32 width
 float32 ratio
 geometry_msgs/Point centroid
 ```
-To get height and width, the maximum and minimum points along the XtionPRO's x and y axes were computed for every indexed point cluster.
-
-
-#### Overview
-
-#### Instructions
+To get height and width, the difference of the maximum and minimum x and y values were computed for every indexed point cluster.
 
 
 
