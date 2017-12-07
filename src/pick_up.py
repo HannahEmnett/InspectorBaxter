@@ -8,14 +8,34 @@ from inspector.msg import ObjectList
 from sensor_msgs.msg import JointState
 import roslib; roslib.load_manifest("moveit_python")
 from moveit_python import PlanningSceneInterface, MoveGroupInterface
-from geometry_msgs.msg import PoseStamped, PoseArray
 from moveit_python.geometry import rotate_pose_msg_by_euler_angles
 from math import pi, sqrt
 from collections import Counter
 from operator import itemgetter
 import numpy as np
+
 import copy
 import time
+
+import argparse
+import struct
+import sys
+
+from geometry_msgs.msg import (
+    PoseStamped,
+    PoseArray,
+    Pose,
+    Point,
+    Quaternion,
+)
+from std_msgs.msg import Header
+
+from baxter_core_msgs.srv import (
+    SolvePositionIK,
+    SolvePositionIKRequest,
+)
+
+
 
 global neutral
 global up
@@ -50,7 +70,7 @@ global prev_state
 global prev_jts
 global back
 
-    
+
 #states 0-startup, 1-train, 2-sort, 3-fetch, 4-shutdown 5-standby
 class sorted():
     def __init__(self):
@@ -68,10 +88,14 @@ def init_sort_array():
     jp7=[-0.19826701683418974, 0.9625729443980972, -0.2519563444101792, 0.2703641138648042, -2.616204233738573, 1.2494273517326695, -0.004601942363656241]
     jp8=[-0.16490293469768197, 1.20992734644462, -0.2331650797585829, 0.2247281854252131, -2.980524670861359, 1.496398258582221, 0.13882526130362993]
     jp9= [-0.06557767868210143, 1.328043867111797, -0.22127672865247094, 0.17333982903105175, -2.600097435465776, 1.5090536000822758, 0.04563592843959106]
+    xp1=[0.5,-0.85,-0.1]
+    xp2=[0.68,-0.82,-0.14]
+    xp3=[0.60,-0.84,-0.1]
     sort_array=sorted()
     sort_array.c_index = ['1', '1', '1', '2', '2', '2', '3', '3', '3']
     sort_array.p_index = ['a','b','c','a','b','c','a','b','c']
-    sort_array.jpos= [jp1,jp2,jp3,jp4,jp5,jp6,jp7,jp8,jp9]
+    #sort_array.jpos= [jp1,jp2,jp3,jp4,jp5,jp6,jp7,jp8,jp9]
+    sort_array.jps=[xp1,xp2,xp3]
 
 def state_int(data):
     if data.state == 1:
@@ -142,7 +166,7 @@ def standby():
     done.state=5
     done.done=1
     out=pub.publish(done)
-    
+
 
 def train_loop(data):
     #initializations
@@ -172,7 +196,7 @@ def train_loop(data):
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
-        
+
     # Clear planning scene
     p.clear()
     # Add table as attached object
@@ -210,7 +234,7 @@ def train_loop(data):
         temp = rospy.wait_for_message("/robot/joint_states", JointState)
         joints=temp.position
         last_joints2 =copy.deepcopy(joints)
-    
+
  # Move left arm to pick object and pick object
     goal = PoseStamped()
     goal.header.frame_id = "base"
@@ -301,9 +325,9 @@ def fetch_loop(data):
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
 
-    
+
     right_gripper.close()
- 
+
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
     time.sleep(1)
@@ -357,8 +381,8 @@ def sort_loop(data):
         #Add all items to collision scene
         objlist = ['obj1', 'obj2', 'obj3']
         sortlist=['sort1','sort2','sort3','sort4','sort5','sort6','sort7','sort8','sort9','sort10']
-        for i in range(1,len(xpos)):
-            p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+        #for i in range(1,len(xpos)):
+        #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
         #for i in range(1,len(prev_sort)):
             #p.addCyl(sortlist[i], 0.05, prev_sort[1,i], prev_sort[2,i], prev_sort[3,i])
         p.waitForSync()
@@ -378,14 +402,16 @@ def sort_loop(data):
 
 
 
-        
+
         #here would add gripper information
         a.moveToPose(goal,"right_gripper", plan_only=False)
         right_gripper.close()
 
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
-
-        hand_off_from_right()
+        out=ik_test('right',0.89,-0.67,-0.07,0,0.7,0,0.7)
+        print(out)
+        a.moveToJointPosition(jts_right,out,plan_only=False)
+        #hand_off_from_right()
 
         if id_num==1:
             g.moveToJointPosition(jts_left, pos1,plan_only=False)
@@ -433,97 +459,14 @@ def sort_loop(data):
     done.done=1
     done.state=2
     out=pub.publish(done)
+    prev_state=2
     rospy.loginfo("Waiting for master...")
-    rospy.spin()
 
 def find_first(item, vec):
     for i in xrange(len(vec)):
         if item == vec[i]:
             return i
     return -1
-
-def test_loop():
-    # Clear planning scene
-    p.clear()
-    # Add table as attached object
-    p.attachBox('table',0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
-
-
-    xn = 1
-    yn = -0.3
-    zn = -0.1
-
-    p.waitForSync()
-
-    # Move left arm to pick object and pick object
-    goal = PoseStamped()
-    goal.header.frame_id = "base"
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x = xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal, "right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    goal.header.stamp = rospy.Time.now()
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
-
-    xn=1
-    yn=-0.2
-    zn=-0.1
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x =xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal,"right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    goal.header.stamp = rospy.Time.now()
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
-
-    xn=1
-    yn=-0.4
-    zn=-0.1
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x =xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal,"right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-    last_joints=copy.deepcopy(joints)
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
 
 
 def hand_off_from_right():
@@ -551,6 +494,50 @@ def hand_off_from_left():
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
 
+def ik_test(limb, x, y, z, xq,yq,zq,wq):
+        ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
+        iksvc = rospy.ServiceProxy(ns, SolvePositionIK)
+        ikreq = SolvePositionIKRequest()
+        hdr = Header(stamp=rospy.Time.now(), frame_id='base')
+        out=PoseStamped()
+        out.header=hdr
+        out.pose.position.x=x
+        out.pose.position.y=y
+        out.pose.position.z=z
+        out.pose.orientation.x=xq
+        out.pose.orientation.y=yq
+        out.pose.orientation.z=zq
+        out.pose.orientatino.w=wq
+
+        ikreq.pose_stamp.append(out)
+        try:
+            rospy.wait_for_service(ns, 5.0)
+            resp = iksvc(ikreq)
+        except (rospy.ServiceException, rospy.ROSException), e:
+            rospy.logerr("Service call failed: %s" % (e,))
+            return 1
+
+        # Check if result valid, and type of seed ultimately used to get solution
+        # convert rospy's string representation of uint8[]'s to int's
+        resp_seeds = struct.unpack('<%dB' % len(resp.result_type),
+                                   resp.result_type)
+        if (resp_seeds[0] != resp.RESULT_INVALID):
+            seed_str = {
+                        ikreq.SEED_USER: 'User Provided Seed',
+                        ikreq.SEED_CURRENT: 'Current Joint Angles',
+                        ikreq.SEED_NS_MAP: 'Nullspace Setpoints',
+                       }.get(resp_seeds[0], 'None')
+            print("SUCCESS - Valid Joint Solution Found from Seed Type: %s" %
+                  (seed_str,))
+            # Format solution into Limb API-compatible dictionary
+            limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+            print "\nIK Joint Solution:\n", limb_joints
+            print "------------------"
+            print "Response Message:\n", resp
+        else:
+            print("INVALID POSE - No Valid Joint Solution Found.")
+
+        return 0
 
 
 if __name__=='__main__':
@@ -584,7 +571,7 @@ if __name__=='__main__':
 
     pub=rospy.Publisher("inspector/master_update",Update,queue_size=1)
     rospy.Subscriber("inspector/obj_list",ObjectList, state_int)
-    
+
     #prev_sort=[float('nan') for x in range(10)] for y in range(4)]
     #Going to neutral and then getting into position
     rospy.loginfo("Getting into position...")
