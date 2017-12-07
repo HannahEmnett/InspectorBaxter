@@ -41,16 +41,7 @@ class Object():
     def __init__(self):
         self.name = None
         self.group_id = 0
-        self.x = 0
-        self.y = 0
-        self.z = 0
-        self.h = 0
-        self.w = 0
-        self.r = 0
-        self.id = 0
         self.pcl = None
-    def add_pcl_data(self, pcl):
-        self.pcl = copy.deepcopy(pcl)
     def associate_name(self, name):
         self.name = name
     def associate_group_id(self, group_id):
@@ -100,7 +91,7 @@ class Master():
 
     
     def done_with_training(self):
-        return (len(self.objects) == self.current_obj_index + 1)
+        return (len(self.objects) == 3)
         
     def cleanup_all_data(self):
         self.current_obj_index = 0
@@ -111,7 +102,7 @@ class Master():
         
     def send_object_data(self, name, obj_data):
         for object in self.objects:
-            if object.id == self.current_obj_index:
+            if object.pcl.id == self.current_obj_index:
                 obj_data.objects.append(object.pcl)
                 
         # increment the index into the PclData
@@ -124,61 +115,43 @@ class Master():
             obj_data.obj_index.append(object.group_id)            
             self.obj_list_publisher.publish(obj_data)
         
-    def copy_pcl_data_ordered(self, msg):
-        # First copy the data in a proximity from origin order 
-        #self.pcl_ordered_list = copy.deepcopy(sorted(pcl_data.centroid, key=lambda centroid: math.sqrt(centroid.x**2 + centroid.y**2)))
+    def copy_pcl_data(self, msg):
         pcl_data = copy.deepcopy(msg)
-        self.pcl_ordered_list = pcl_data
-        # Now associate a groupId with them
+        self.pcl_ordered_list.append(pcl_data)
+        object = Object()
+        object.pcl = pcl_data
+        self.objects.append(object)
+        print pcl_data
+        
+    def sort_and_store(self):
 
-        print pcl_data.ratio
-        for (ratio) in zip(pcl_data.ratio):
-            print "r = {}".format(ratio)
-        i = 0
-        for (centroid, height, width, ratio) in zip(pcl_data.centroid, pcl_data.height, pcl_data.width, pcl_data.ratio):
-            object = Object()
-            object.x = centroid.x
-            object.y = centroid.y
-            object.z = centroid.z
-            object.h = height
-            object.w = width
-            object.r = ratio
-            object.id = i
-            print "id = {}, x = {}, y = {}, z = {}, h = {}, w = {}, r = {}".format(object.id, object.x, object.y, object.z, object.h, object.w, object.r)
-            pcl = PclData()
-            pt = Point()
-            pt.x = centroid.x
-            pt.y = centroid.y
-            pt.z = centroid.z
-            pcl.centroid.append(pt)
-            pcl.height.append(height)
-            pcl.width.append(width)
-            pcl.ratio.append(ratio)
-            object.add_pcl_data(pcl)
-            object.id = i
-            i += 1
-            self.objects.append(object)
-
+        # First copy the data in a proximity from origin order 
+        self.objects = sorted(self.objects, key=lambda object: math.sqrt(object.pcl.centroid.x**2 + object.pcl.centroid.y**2))
+        
         group_ids = []
         first = True
         i = 0
         for object in self.objects:
+            object.pcl.id = i
             if first:
-                group_ids.append(object.r)
+                group_ids.append(object.pcl.ratio)
                 object.associate_group_id(i)
-                print "Associating group_id {} with object id {}".format(i, object.id)
+                print "Associating group_id {} with object {}".format(i, object.pcl.id)
                 first = False
                 i += 1
                 continue
-            id = in_range(object.r, group_ids)
+            id = in_range(object.pcl.ratio, group_ids)
             if id is None:
-                group_ids.append(object.r)
+                group_ids.append(object.pcl.ratio)
                 i += 1
                 object.associate_group_id(i)
-                print "Associating group_id {} with object id {}".format(i, object.id)
+                print "Associating group_id {} with object {}".format(i,
+                                                                      object.pcl.id)
             else:
                 object.associate_group_id(id)
-                print "Associating group_id {} with object id {}".format(id, object.id)
+                print "Associating group_id {} with object {}".format(id,
+                                                                      object.pcl.id)
+                
                 
     def state_callback(self, msg):
         print "state_callback in state {} with new state {}".format(self.current_state, msg.state)
@@ -202,7 +175,7 @@ class Master():
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data()
+                self.cleanup_all_data()
                 self.state_publisher.publish(state_msg)
             else:
                 print "wrong state Rcvd: {}, current state {}".format(msg.state, self.current_state )
@@ -215,7 +188,7 @@ class Master():
                 ###
                 obj_data = ObjectList()
                 obj_data.state = STATE_SORT
-                send_sorted_objects(self, obj_data)
+                self.send_sorted_objects(obj_data)
                 update = Update()
                 self.update_publisher.publish(update)
             elif (msg.state == STATE_TRAIN):
@@ -249,7 +222,7 @@ class Master():
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data()
+                self.cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -272,7 +245,7 @@ class Master():
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data()
+                self.cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -290,11 +263,21 @@ class Master():
                 self.state_publisher.publish(state_msg)
                 update = Update()
                 self.update_publisher.publish(update)
+            elif (msg.state == STATE_SORT):
+                self.current_state = STATE_SORT
+                ###
+                # copy state and object data list here
+                ###
+                obj_data = ObjectList()
+                obj_data.state = STATE_SORT
+                self.send_sorted_objects(obj_data)
+                update = Update()
+                self.update_publisher.publish(update)
             elif (msg.state == STATE_EXIT):
                 self.current_state = STATE_INIT
                 state_msg = State()
                 state_msg.state = STATE_EXIT
-                cleanup_all_data()
+                self.cleanup_all_data()
                 self.state_publisher.publish(state_msg)
                 obj_data = ObjectList()
                 obj_data.state = STATE_EXIT
@@ -310,21 +293,25 @@ class Master():
         if self.num_objects <= 3:
             # Store the incoming data, in a sorted fashion
             print "pcl_data_callback in state {}".format(self.current_state)
-            self.copy_pcl_data_ordered(msg)     
+            self.copy_pcl_data(msg)
+            self.num_objects += 1
+            if (self.num_objects == 3):
+                self.sort_and_store()
 
     def update_callback(self, msg):
         print "update_callback in state {}".format(self.current_state)
         state_msg = State()
         state_msg.state = STATE_STANDBY
-        if (done_with_training(self)):
+        if (self.done_with_training()):
             print "Done with training"
             state_msg.done = True
         self.state_publisher.publish(state_msg)
 
-    def fetch_object(name):
+    def fetch_object(self, name):
         print "fetch_object: name {} in state {}".format(name, self.current_state)
         for object in self.objects:
             if object.name == name:
+                print object.name
                 # We have already heard this name before so all we need to do
                 # is send the group_id to PickNMove
                 obj_data = ObjectList()
@@ -335,13 +322,13 @@ class Master():
                 return()
         # Hearing this object name for the first time in the fetch
         # phase, this should not be happening
-        print "Uknown object name {} in state {}".format(msg.name, self.current_state)
+        print "Unknown object name {} in state {}".format(name, self.current_state)
         return()
                         
     def handle_naming(self, name):
         print "name {} in state {}".format(name, self.current_state)
         for object in self.objects:
-            if object.id == self.current_obj_index:
+            if object.pcl.id == self.current_obj_index:
                 object.associate_name(name)
         # In either case, since we heard the name, send the next object's
         # location to PickNMove
