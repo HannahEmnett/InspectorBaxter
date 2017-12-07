@@ -87,7 +87,7 @@ class Master():
 
     
     def done_with_training(self):
-        return (len(self.objects) == 3)
+        return (len(self.objects) == self.current_obj_index+1)
         
     def cleanup_all_data(self):
         self.current_obj_index = 0
@@ -170,6 +170,10 @@ class Master():
         elif (self.current_state == STATE_TRAIN):
             if (msg.state == STATE_SORT):
                 self.current_state = STATE_SORT
+                obj_data = ObjectList()
+                obj_data.state = STATE_STANDBY
+                print "sent state STATE_STANDBY when in state {}".format(self.current_state)
+                self.obj_list_publisher.publish(obj_data)
                 ###
                 # copy state and object data list here
                 ###
@@ -183,6 +187,10 @@ class Master():
                 self.handle_naming(msg.name)
             elif (msg.state == STATE_FETCH):
                 self.current_state = STATE_FETCH
+                obj_data = ObjectList()
+                obj_data.state = STATE_STANDBY
+                print "sent state STATE_STANDBY when in state {}".format(self.current_state)
+                self.obj_list_publisher.publish(obj_data)                
                 ##
                 # Send the request to PCL node to get list of PCL data for objects on table
                 ##
@@ -279,12 +287,13 @@ class Master():
         print "fetch_object: name {} in state {}".format(name, self.current_state)
         for object in self.objects:
             if object.name == name:
-                print object.name
+                print "asking pickup to fetch {}".format(object.name)
                 # We have already heard this name before so all we need to do
                 # is send the group_id to PickNMove
                 obj_data = ObjectList()
                 obj_data.state = STATE_FETCH
-                obj_data.obj_index = object.group_id
+                obj_data.obj_index.append(object.group_id)
+                obj_data.objects.append(object.pcl)
                 print "known object name {} with group_id {} in state {}".format(name, object.group_id, self.current_state)
                 self.obj_list_publisher.publish(obj_data)
                 return()

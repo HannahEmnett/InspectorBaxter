@@ -14,7 +14,42 @@ from math import pi, sqrt
 from collections import Counter
 from operator import itemgetter
 import numpy as np
+import copy
+import time
 
+global neutral
+global up
+global away
+global ho1_r
+global ho1_l
+global ho2_l
+global l_neut
+global shelf1
+global shelf2
+global shelf3
+global pub
+global p
+global g
+global a
+global jts_left
+global jts_right
+global jts_all
+global last_obj_x
+global last_obj_y
+global last_obj_z
+global last_joints
+global last_joints2
+global prev_sort
+global sort_array
+global right_gripper
+global left_gripper
+global pos1
+global pos2
+global pos3
+global prev_state
+global prev_jts
+
+    
 #states 0-startup, 1-train, 2-sort, 3-fetch, 4-shutdown 5-standby
 class sorted():
     def __init__(self):
@@ -45,7 +80,8 @@ def state_int(data):
     elif data.state ==3:
         fetch_loop(data)
     elif data.state ==4:
-        shutdown()
+        #shutdown()
+        pass
     elif data.state ==5:
         standby()
     else:
@@ -87,33 +123,52 @@ def wait_for_coord():
     rospy.loginfo("Moving to neutral pose...")
 
 def standby():
+    global last_joints
+    global last_joints2
+    global prev_state
+    global neutral
     if prev_state == 1:
-        a.moveToJointPosition(jts_all, prev_jts, plan_only=False)
+        a.moveToJointPosition(jts_all,last_joints, plan_only=False)
         right_gripper.open()
+        a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
     elif prev_state == 3:
         right_gripper.open()
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
     else:
         return
+    done=Update()
+    done.state=5
+    done.done=1
+    out=pub.publish(done)
+    
 
 def train_loop(data):
     #initializations
+    global last_joints
+    global last_joints2
+    global neutral
+    global up
+    global prev_state
     done=Update()
     prev_sort = np.zeros((4,10))
 
     #unpack the message (arrays of object positions)
-    for i in range(1,len(data.objects.height)):
-        xpos[i]=data[2][0]
-        ypos[i]=data.objects.centroid[i].y
-        zpos[i]=data.objects.centroid[i].z
-        heights=data.objects.height[i]
-        widths=data.objects.width[i]
-        num=data.obj_index[i]
-
-    if data.next == 1:
-        a.moveToJointPosition(jts_all,joints, plan_only=False)
+    xpos=data.objects[0].centroid.x
+    ypos=data.objects[0].centroid.y
+    zpos=data.objects[0].centroid.z
+    heights=data.objects[0].height
+    widths=data.objects[0].width
+    num=data.obj_index
+    print("in training loop")
+    if data.next ==0:
+        last_joints=[]
+        last_joints2=[]
+    elif data.next == 1:
+        print(last_joints)
+        a.moveToJointPosition(jts_all,last_joints, plan_only=False)
         right_gripper.open()
+        a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
 
     # Clear planning scene
@@ -121,9 +176,9 @@ def train_loop(data):
     # Add table as attached object
     p.attachBox('table', 0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
 
-    xn = xpos[0]
-    yn = ypos[0]
-    zn = zpos[0]
+    xn = xpos
+    yn = ypos
+    zn = zpos
 
     #last_obj_x=xn
     #last_obj_y=yn
@@ -131,28 +186,49 @@ def train_loop(data):
 
     #Add all items to collision scene
     objlist = ['obj1', 'obj2', 'obj3']
-    for i in range(1,len(xpos)):
-        p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+    #for i in range(1,len(xpos)):
+    #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
     p.waitForSync()
 
     # Move left arm to pick object and pick object
     goal = PoseStamped()
     goal.header.frame_id = "base"
     goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x = xn
+    goal.pose.position.x = xn-0.05
     goal.pose.position.y = yn
-    goal.pose.position.z = zn+0.1
+    goal.pose.position.z = zn-0.04
     goal.pose.orientation.x = 0.0
     goal.pose.orientation.y = 0.7
     goal.pose.orientation.z = 0.0
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
-
-    #here would add gripper information
+    time.sleep(0.5)
+    while len(last_joints2)<2:
+        temp = rospy.wait_for_message("/robot/joint_states", JointState)
+        joints=temp.position
+        last_joints2 =copy.deepcopy(joints)
+    
+ # Move left arm to pick object and pick object
+    goal = PoseStamped()
+    goal.header.frame_id = "base"
+    goal.header.stamp = rospy.Time.now()
+    goal.pose.position.x = xn+0.05
+    goal.pose.position.y = yn
+    goal.pose.position.z = zn-0.04
+    goal.pose.orientation.x = 0.0
+    goal.pose.orientation.y = 0.7
+    goal.pose.orientation.z = 0.0
+    goal.pose.orientation.w = 0.7
+    a.moveToPose(goal, "right_gripper", plan_only=False)
+   
+    
     right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-    last_joints=joints
+    time.sleep(0.5)
+    while len(last_joints)<2:
+        temp = rospy.wait_for_message("/robot/joint_states", JointState)
+        joints=temp.position
+        last_joints =copy.deepcopy(joints)
+    print(last_joints)
 
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
@@ -160,69 +236,82 @@ def train_loop(data):
     done.state=1
     done.done=1
     out=pub.publish(done)
+    prev_state=1
     rospy.loginfo("Waiting for master...")
-    rospy.spin()
 
 def fetch_loop(data):
+    global up
+    global last_joints
+    global neutral
     #initializations
     done=Update()
-
+    print data
     #unpack the message (arrays of object positions)
-    for i in range(1,len(data.objects.height)):
-        xpos[i]=data.objects.centroid[i].x
-        ypos[i]=data.objects.centroid[i].y
-        zpos[i]=data.objects.centroid[i].z
-        heights=data.objects.height[i]
-        widths=data.objects.width[i]
-        num=data.obj_index[i]
+    xpos=data.objects[0].centroid.x
+    ypos=data.objects[0].centroid.y
+    zpos=data.objects[0].centroid.z
+    heights=data.objects[0].height
+    widths=data.objects[0].width
+    num=data.obj_index
 
     # Clear planning scene
     p.clear()
     # Add table as attached object
     p.attachBox('table',0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
 
-    xn = xpos[0]
-    yn = ypos[0]
-    zn = zpos[0]
+    xn = xpos
+    yn = ypos
+    zn = zpos
 
-    last_obj_x=xn
-    last_obj_y=yn
-    last_obj_z=zn
+    #last_obj_x=xn
+    #last_obj_y=yn
+    #last_obj_z=zn
 
     #Add all items to collision scene
     objlist = ['obj1', 'obj2', 'obj3']
-    for i in range(1,len(xpos)):
-        p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+    #for i in range(1,len(xpos)):
+    #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
     p.waitForSync()
 
     # Move left arm to pick object and pick object
     goal = PoseStamped()
     goal.header.frame_id = "base"
     goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x = xn
+    goal.pose.position.x = xn-0.05
     goal.pose.position.y = yn
-    goal.pose.position.z = zn+0.1
+    goal.pose.position.z = zn-0.04
+    goal.pose.orientation.x = 0.0
+    goal.pose.orientation.y = 0.7
+    goal.pose.orientation.z = 0.0
+    goal.pose.orientation.w = 0.7
+    a.moveToPose(goal, "right_gripper", plan_only=False)
+ # Move left arm to pick object and pick object
+    goal = PoseStamped()
+    goal.header.frame_id = "base"
+    goal.header.stamp = rospy.Time.now()
+    goal.pose.position.x = xn+0.05
+    goal.pose.position.y = yn
+    goal.pose.position.z = zn-0.04
     goal.pose.orientation.x = 0.0
     goal.pose.orientation.y = 0.7
     goal.pose.orientation.z = 0.0
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
 
-    #here would add gripper information
-    a.moveToPose(goal,"right_gripper", plan_only=False)
+    
     right_gripper.close()
-
+ 
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
-    rospy.sleep(2)
+    time.sleep(1)
     right_gripper.open()
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
     done.state=3
     done.done=1
     out=pub.publish(done)
+    prev_state=3
     rospy.loginfo("Waiting for master...")
-    rospy.spin()
 
 def sort_loop(data):
     #initializations
@@ -274,15 +363,18 @@ def sort_loop(data):
         goal = PoseStamped()
         goal.header.frame_id = "base"
         goal.header.stamp = rospy.Time.now()
-        goal.pose.position.x = xn
+        goal.pose.position.x = xn-0.3
         goal.pose.position.y = yn
-        goal.pose.position.z = zn+0.1
+        goal.pose.position.z = zn
         goal.pose.orientation.x = 0.0
         goal.pose.orientation.y = 0.7
         goal.pose.orientation.z = 0.0
         goal.pose.orientation.w = 0.7
         a.moveToPose(goal, "right_gripper", plan_only=False)
 
+
+
+        
         #here would add gripper information
         a.moveToPose(goal,"right_gripper", plan_only=False)
         right_gripper.close()
@@ -421,7 +513,7 @@ def test_loop():
     right_gripper.close()
     temp = rospy.wait_for_message("/robot/joint_states", JointState)
     joints=temp.position
-    last_joints=joints
+    last_joints=copy.deepcopy(joints)
 
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
@@ -459,38 +551,10 @@ def hand_off_from_left():
 
 if __name__=='__main__':
     rospy.init_node("pick_up")
-    global neutral
-    global up
-    global away
-    global ho1_r
-    global ho1_l
-    global ho2_l
-    global l_neut
-    global shelf1
-    global shelf2
-    global shelf3
-    global pub
-    global p
-    global g
-    global a
-    global jts_left
-    global jts_right
-    global jts_all
-    global last_obj_x
-    global last_obj_y
-    global last_obj_z
-    global last_joints
-    global prev_sort
-    global sort_array
-    global right_gripper
-    global left_gripper
-    global pos1
-    global pos2
-    global pos3
-    global prev_state
-    global prev_jts
+
     right_gripper=baxter_interface.Gripper('right')
     left_gripper = baxter_interface.Gripper('left')
+    last_joints=[]
 
 
     #Position initializations
@@ -506,8 +570,6 @@ if __name__=='__main__':
     pos2=[-0.0015339807878854137, 1.7629274204773118, -0.4843544337748194, 0.09203884727312482, -2.9061266026489165, 1.8871798642960302, 0.04180097646987752]
     pos3=[-0.019941750242510378, 1.5811506971128901, -0.20555342557664544, 0.15761652595522627, -2.6499518110720524, 1.7786507235531372, 0.09050486648523941]
     l_neut=[-0.019558255045539024, 0.896228275322053, -0.14841264122791378, 0.27228158984966094, -2.657238219814508, 1.28355842426312, -0.298359263243713]
-    pub=rospy.Publisher("inspector/master_update",Update,queue_size=1)
-    rospy.Subscriber("inspector/obj_list",ObjectList, state_int)
     p = PlanningSceneInterface("base")
     g = MoveGroupInterface("left_arm", "base")
     a= MoveGroupInterface("right_arm", "base")
@@ -515,12 +577,15 @@ if __name__=='__main__':
     jts_right = ['right_e0', 'right_e1', 'right_s0', 'right_s1', 'right_w0', 'right_w1', 'right_w2']
     jts_all=['head_nod', 'head_pan', 'left_e0', 'left_e1', 'left_s0', 'left_s1', 'left_w0', 'left_w1', 'left_w2', 'right_e0', 'right_e1', 'right_s0', 'right_s1', 'right_w0', 'right_w1', 'right_w2', 'torso_t0']
 
+    pub=rospy.Publisher("inspector/master_update",Update,queue_size=1)
+    rospy.Subscriber("inspector/obj_list",ObjectList, state_int)
+    
     #prev_sort=[float('nan') for x in range(10)] for y in range(4)]
     #Going to neutral and then getting into position
     rospy.loginfo("Getting into position...")
     #startup()
     init_sort_array()
     wait_for_coord()
-    test_loop()
+    #test_loop()
     #hand_off()
     rospy.spin()

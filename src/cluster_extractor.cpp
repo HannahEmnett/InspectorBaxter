@@ -24,7 +24,7 @@
 //---------------------------------------------------------------------------
 // Global Variables
 //---------------------------------------------------------------------------
-#define MAX_CLUSTERS 4
+#define MAX_CLUSTERS 3
 typedef pcl::PointXYZ PointT;
 std::string filename;
 

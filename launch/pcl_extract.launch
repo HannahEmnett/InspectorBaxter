@@ -19,12 +19,12 @@
     <node pkg="nodelet" type="nodelet" name="cropbox" args="load pcl/CropBox /pcl_manager" output="screen">
       <remap from="~input" to="/camera/depth/points" />
       <rosparam>
-        min_x: -0.3
-        max_x: 0.3
-        min_y: -0.3
-        max_y: 0.015
+        min_x: -0.5
+        max_x: 0.5
+        min_y: -0.5
+        max_y: 0.013
         min_z: 0.5
-        max_z: 1.1
+        max_z: .75
       </rosparam>
     </node>
   </group>
