@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import rospy
 import numpy as np
-from math import pi, sin, cos, dot
-from inspector.msgs import PclData
+from math import pi, sin, cos
+from inspector.msg import PclData
 
 def trans_points(data):
     pub = rospy.Publisher("inspector/pclData2", PclData, queue_size = 10)
@@ -27,6 +27,5 @@ def trans_points(data):
 
 if __name__ == '__main__':
     rospy.init_node("pcl_transform")
-    pub = rospy.Publisher("inspector/pclData2", PclData, queue_size = 10)
     rospy.Subscriber("inspector/pclData",PclData, trans_points
     rospy.spin()
