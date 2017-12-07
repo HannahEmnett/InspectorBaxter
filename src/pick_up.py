@@ -8,12 +8,29 @@ from inspector.msg import ObjectList
 from sensor_msgs.msg import JointState
 import roslib; roslib.load_manifest("moveit_python")
 from moveit_python import PlanningSceneInterface, MoveGroupInterface
-from geometry_msgs.msg import PoseStamped, PoseArray
 from moveit_python.geometry import rotate_pose_msg_by_euler_angles
 from math import pi, sqrt
 from collections import Counter
 from operator import itemgetter
 import numpy as np
+
+import argparse
+import struct
+import sys
+
+from geometry_msgs.msg import (
+    PoseStamped,
+    PoseArray,
+    Pose,
+    Point,
+    Quaternion,
+)
+from std_msgs.msg import Header
+
+from baxter_core_msgs.srv import (
+    SolvePositionIK,
+    SolvePositionIKRequest,
+)
 
 #states 0-startup, 1-train, 2-sort, 3-fetch, 4-shutdown 5-standby
 class sorted():
@@ -455,6 +472,50 @@ def hand_off_from_left():
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
 
+def ik_test(limb, x, y, z, xq,yq,zq,wq):
+        ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
+        iksvc = rospy.ServiceProxy(ns, SolvePositionIK)
+        ikreq = SolvePositionIKRequest()
+        hdr = Header(stamp=rospy.Time.now(), frame_id='base')
+        out=PoseStamped()
+        out.header=hdr
+        out.pose.position.x=x
+        out.pose.position.y=y
+        out.pose.position.z=z
+        out.pose.orientation.x=xq
+        out.pose.orientation.y=yq
+        out.pose.orientation.z=zq
+        out.pose.orientatino.w=wq
+
+        ikreq.pose_stamp.append(out)
+        try:
+            rospy.wait_for_service(ns, 5.0)
+            resp = iksvc(ikreq)
+        except (rospy.ServiceException, rospy.ROSException), e:
+            rospy.logerr("Service call failed: %s" % (e,))
+            return 1
+
+        # Check if result valid, and type of seed ultimately used to get solution
+        # convert rospy's string representation of uint8[]'s to int's
+        resp_seeds = struct.unpack('<%dB' % len(resp.result_type),
+                                   resp.result_type)
+        if (resp_seeds[0] != resp.RESULT_INVALID):
+            seed_str = {
+                        ikreq.SEED_USER: 'User Provided Seed',
+                        ikreq.SEED_CURRENT: 'Current Joint Angles',
+                        ikreq.SEED_NS_MAP: 'Nullspace Setpoints',
+                       }.get(resp_seeds[0], 'None')
+            print("SUCCESS - Valid Joint Solution Found from Seed Type: %s" %
+                  (seed_str,))
+            # Format solution into Limb API-compatible dictionary
+            limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+            print "\nIK Joint Solution:\n", limb_joints
+            print "------------------"
+            print "Response Message:\n", resp
+        else:
+            print("INVALID POSE - No Valid Joint Solution Found.")
+
+        return 0
 
 
 if __name__=='__main__':
