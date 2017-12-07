@@ -155,6 +155,8 @@ Now, as the user gives commands, our other nodes can subscribe to the `/inspecto
 
 *This [Github repository](https://github.com/NU-MSR/nodelet_pcl_demo) was used as a framework to build the CV components of this project.*
 
+![image](screenshots/point_clouds.png)
+
 ### Overview
 1. An [ASUS XtionPRO LIVE](https://www.asus.com/us/3D-Sensor/Xtion_PRO_LIVE/) is used to view Baxter's environment. This sensor was chosen over other depth sensing devices like the Kinect because of its relative ease of use with computers. Point cloud locations and the centroid of each object is published to a topic that the `master.py` node subscribes to.
 
