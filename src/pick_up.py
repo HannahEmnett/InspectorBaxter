@@ -110,8 +110,8 @@ def shutdown():
     baxter_interface.RobotEnable().disable()
 
 def wait_for_coord():
-    #left_gripper.calibrate()
-    #left_gripper.open()
+    left_gripper.calibrate()
+    left_gripper.open()
     right_gripper.calibrate()
     right_gripper.open()
     # Clear planning scene
@@ -119,7 +119,7 @@ def wait_for_coord():
     # Add table as attached object
     p.attachBox('table', 0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
     #move to start
-    #g.moveToJointPosition(jts_left, away, plan_only=False)
+    g.moveToJointPosition(jts_left, away, plan_only=False)
     a.moveToJointPosition(jts_right, neutral, plan_only=False)
     rospy.loginfo("Moving to neutral pose...")
 
@@ -133,11 +133,9 @@ def standby():
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
-    elif prev_state == 3:
+    else:
         right_gripper.open()
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
-    else:
-        return
     done=Update()
     done.state=5
     done.done=1
@@ -173,7 +171,59 @@ def train_loop(data):
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
         
-    # Clear planning scene
+    xn = xpos
+    yn = ypos
+    zn = zpos
+
+    #last_obj_x=xn
+    #last_obj_y=yn
+    #last_obj_z=zn
+
+    #Add all items to collision scene
+    objlist = ['obj1', 'obj2', 'obj3']
+    #for i in range(1,len(xpos)):
+    #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+    p.waitForSync()
+
+    # Move left arm to pick object and pick object
+    goal = PoseStamped()
+    goal.header.frame_id = "base"
+    goal.header.stamp = rospy.Time.now()
+    goal.pose.position.x = xn-0.05
+    goal.pose.position.y = yn
+    goal.pose.position.z = zn-0.04
+    goal.pose.orientation.x = 0.0
+    goal.pose.orientation.y = 0.7
+    goal.pose.orientation.z = 0.0
+    goal.pose.orientation.w = 0.7
+    a.moveToPose(goal, "right_gripper", plan_only=False)
+ # Move left arm to pick object and pick object
+    goal = PoseStamped()
+    goal.header.frame_id = "base"
+    goal.header.stamp = rospy.Time.now()
+    goal.pose.position.x = xn+0.05
+    goal.pose.position.y = yn
+    goal.pose.position.z = zn-0.04
+    goal.pose.orientation.x = 0.0
+    goal.pose.orientation.y = 0.7
+    goal.pose.orientation.z = 0.0
+    goal.pose.orientation.w = 0.7
+    a.moveToPose(goal, "right_gripper", plan_only=False)
+
+    
+    right_gripper.close()
+    a.moveToJointPosition(jts_right,neutral,plan_only=False)
+
+    hand_off_from_right()
+
+
+
+
+
+
+
+
+        # Clear planning scene
     p.clear()
     # Add table as attached object
     p.attachBox('table', 0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
@@ -320,15 +370,33 @@ def fetch_loop(data):
 def sort_loop(data):
     #initializations
     done=Update()
+    xpos=[]
+    ypos=[]
+    zpos=[]
+    id_num=[]
+    #for objects, index in zip(data.objects, data.obj_index):
+    #    xpos[index] = objects.centroid.x
+    #    ypos[index]= objects.centroid.y
+    #    zpos[index]=objects.centroid.z
+    #    id_num[index] = obj_index[index]
 
+    xpos=data.objects[0].centroid.x
+    ypos=data.objects[0].centroid.y
+    zpos=data.objects[0].centroid.z
+    heights=data.objects[0].height
+    widths=data.objects[0].width
+    num=data.obj_index
+
+   
+    
     #unpack the message (arrays of object positions)
-    for i in range(1,len(data.objects.height)):
-        xpos[i]=data.objects.centroid[i].x
-        ypos[i]=data.objects.centroid[i].y
-        zpos[i]=data.objects.centroid[i].z
-        heights=data.objects.height[i]
-        widths=data.objects.width[i]
-        num=data.obj_index[i]
+    #for i in range(1,len(data.objects.height)):
+    #    xpos[i]=data.objects.centroid[i].x
+    #    ypos[i]=data.objects.centroid[i].y
+    #    zpos[i]=data.objects.centroid[i].z
+    #    heights=data.objects.height[i]
+    #    widths=data.objects.width[i]
+    #    num=data.obj_index[i]
 
     # Clear planning scene
     p.clear()
@@ -343,22 +411,22 @@ def sort_loop(data):
     place.pose.orientation.z = 0.0
     place.pose.orientation.w = 0.7
 
-    for q in range(1,len(xpos)):
+    for q in range(1,4):
         num_items=Counter(prev_sort)
         x_1=num_items['1']
         x_2=num_items['2']
         x_3=num_items['3']
 
-        xn = xpos[q]
-        yn = ypos[q]
-        zn = zpos[q]
-        id_num=num[q]
+        xn = xpos #[q]
+        yn = ypos #[q]
+        zn = zpos # [q]
+        id_num=num #[q]
 
         #Add all items to collision scene
         objlist = ['obj1', 'obj2', 'obj3']
         sortlist=['sort1','sort2','sort3','sort4','sort5','sort6','sort7','sort8','sort9','sort10']
-        for i in range(1,len(xpos)):
-            p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+        #for i in range(1,len(xpos)):
+        #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
         #for i in range(1,len(prev_sort)):
             #p.addCyl(sortlist[i], 0.05, prev_sort[1,i], prev_sort[2,i], prev_sort[3,i])
         p.waitForSync()
@@ -367,9 +435,9 @@ def sort_loop(data):
         goal = PoseStamped()
         goal.header.frame_id = "base"
         goal.header.stamp = rospy.Time.now()
-        goal.pose.position.x = xn-0.3
+        goal.pose.position.x = xn-0.5
         goal.pose.position.y = yn
-        goal.pose.position.z = zn
+        goal.pose.position.z = zn-0.4
         goal.pose.orientation.x = 0.0
         goal.pose.orientation.y = 0.7
         goal.pose.orientation.z = 0.0
@@ -380,7 +448,7 @@ def sort_loop(data):
 
         
         #here would add gripper information
-        a.moveToPose(goal,"right_gripper", plan_only=False)
+        #a.moveToPose(goal,"right_gripper", plan_only=False)
         right_gripper.close()
 
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
@@ -434,7 +502,6 @@ def sort_loop(data):
     done.state=2
     out=pub.publish(done)
     rospy.loginfo("Waiting for master...")
-    rospy.spin()
 
 def find_first(item, vec):
     for i in xrange(len(vec)):
@@ -533,6 +600,7 @@ def hand_off_from_right():
     a.moveToJointPosition(jts_right, ho1_r, plan_only=False)
     g.moveToJointPosition(jts_left,ho2_l,plan_only=False)
     left_gripper.close()
+    time.sleep(0.5)
     right_gripper.open()
     g.moveToJointPosition(jts_left,ho1_l,plan_only=False)
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
