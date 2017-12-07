@@ -218,10 +218,6 @@ geometry_msgs/Point centroid
 To get height and width, the maximum and minimum points along the XtionPRO's x and y axes were computed for every indexed point cluster.
 
 
-### Working with Extracted Point Cloud Data
-Once the objects have been identified, another [node]() creates an averaged approximation of each object's height, width, and centroid. This reduces the chance of using an inaccurate data point when Baxter goes to reach for an object.
-
-
 #### Overview
 
 #### Instructions
