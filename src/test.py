@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point
 
 def test_loop():
     pub = rospy.Publisher("inspector/obj_list", ObjectList, queue_size = 10)
-    rate=rospy.Rate(git 10)
+    rate=rospy.Rate(10)
     out=ObjectList()
     obj1=PclData()
     obj2=PclData()
@@ -50,7 +50,6 @@ def test_loop():
         rate.sleep()
 
 if __name__ == '__main__':
-    rospy.init_node("test_loop")
-    rospy.Subscriber("inspector/pclData2",PclData, test_loop)
-    #test_loop()
+    rospy.init_node("test")
+    test_loop()
     rospy.spin()

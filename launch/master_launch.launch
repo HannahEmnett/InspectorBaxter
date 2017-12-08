@@ -1,0 +1,9 @@
+<launch>
+
+<include file="$(find inspector)/launch/move_baxter.launch" />
+<!--<include file="$(find inspector)/launch/pcl_extract.launch" />
+<include file="$(find openni2_launch)launch/openni2.launch" />-->
+<!--<node pkg="inspector" type="master.py" name="master" />-->
+<node pkg="inspector" type="pcl_transform.py" name="pcl_transform" />
+
+</launch>
