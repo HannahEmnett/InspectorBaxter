@@ -135,17 +135,14 @@ public:
                 cloud_cluster->height = 1;
                 cloud_cluster->is_dense = true;
 
-
-
                 // convert to rosmsg and publish:
                 ROS_DEBUG("Publishing extracted cloud");
                 pcl::toROSMsg(*cloud_cluster, *ros_cloud);
                 ros_cloud->header.frame_id = scan->header.frame_id;
                 if(j < MAX_CLUSTERS)
                 {
+                    // compute centroid and publish for rviz
                     cloud_pub[j].publish(ros_cloud);
-
-                    // compute centroid and publish
                     pcl::compute3DCentroid(*cloud_cluster, centroid);
                     pt.point.x = centroid(0);
                     pt.point.y = centroid(1);
@@ -161,15 +158,9 @@ public:
                     pclData.height = height;
                     pclData.width = width;
                     pclData.ratio = ratio;
-
-                    //pclData.height.push_back(height);
-                    //pclData.width.push_back(width);
-                    //pclData.ratio.push_back(ratio);
-
                     pt2.x = centroid(0);
                     pt2.y = centroid(1);
                     pt2.z = centroid(2);
-                    // pclData.centroid.push_back(pt2);
                     pclData.centroid = pt2;
                     pclData.id = j;
                     pclData_pub.publish(pclData);
@@ -183,27 +174,6 @@ public:
                     std::stringstream ss;
                     ss << "cluster_" << j+1 << "_frame";
                     br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), scan->header.frame_id, ss.str()));
-
-                    //Transform points to Baxters POV
-                    // geometry_msgs::Point transCentroid;
-                    // //Rot x
-                    // float** rotx = new float*[4];
-                    // for(int i = 0; i < 4; ++i) {
-                    //   trans[i] = new float[4];
-                    // }
-                    //
-                    // //Rot y
-                    // float** roty = new float*[4];
-                    // for(int i = 0; i < 4; ++i) {
-                    //   trans[i] = new float[4];
-                    // }
-                    //
-                    // double pi = 3.1415926535897;
-                    // float theta = pi/2;
-                    // rotx = [[1,0,0,0],[0,cos(theta),-sin(theta),0],[0,sin(theta),cos(theta),0],[0,0,0,1]];
-                    // roty = [[cos(theta),0,sin(theta),0],[0,1,0,0],[-sin(theta),0,cos(theta)],[0,0,0,1]];
-
-
                   }
                 j++;
             }
