@@ -42,48 +42,6 @@
     </node>
   </group>
 
-  <!-- SACSegmentation filter: identifies table surface -->
-  <!-- <group ns="normal_segmentation">
-    <node pkg="nodelet" type="nodelet" name="segmentation" args="load pcl/SACSegmentation /pcl_manager" output="screen">
-      <remap from="~input" to="/cloud_downsampler/voxel/output" />
-      <param name="model_type" value="0" type="int" />
-      <param name="distance_threshold" value="0.02" type="double" />
-    </node>
-  </group> -->
-
-  <!-- Separate table surface and all other points into two point clouds -->
-  <!-- <group ns="extract_indices" > -->
-    <!-- Point cloud for table surface -->
-    <!-- <node pkg="nodelet" type="nodelet" name="extract_inliers" args="load pcl/ExtractIndices /pcl_manager" output="screen">
-      <remap from="~input" to="/cloud_downsampler/voxel/output" />
-      <remap from="~indices" to="/normal_segmentation/segmentation/inliers" />
-      <param name="approximate_sync" value="true" />
-    </node> -->
-
-    <!-- Point clouds for everything else -->
-    <!-- <node pkg="nodelet" type="nodelet" name="extract_outliers" args="load pcl/ExtractIndices /pcl_manager" output="screen">
-      <remap from="~input" to="/cloud_downsampler/voxel/output" />
-      <remap from="~indices" to="/normal_segmentation/segmentation/inliers" />
-      <param name="negative" value="true" />
-      <param name="approximate_sync" value="true" />
-    </node>
-  </group> -->
-
-  <!-- Custom filter that removes all points below the table surface -->
-  <!-- <group ns="table_cutoff" >
-    <node pkg="cv_inspector_baxter" type="table_cutoff.py" name="table_cutoff" output="screen"
-          respawn="true" />
-    <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/PassThrough /pcl_manager" output="screen">
-      <remap from="~input" to="/cloud_downsampler/voxel/output" />
-      <rosparam>
-        input_frame: table_frame
-        filter_field_name: y
-        filter_limit_min: -0.3
-        filter_limit_max: 0.015
-      </rosparam>
-    </node>
-  </group> -->
-
   <!-- StatisticalOutlierRemoval filter: removes any random/stray points to clean up the data -->
   <group ns="outlier">
     <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/StatisticalOutlierRemoval /pcl_manager" output="screen">
@@ -98,11 +56,7 @@
 
   <!-- Extract clusters from dataset using Euclidean cluster extraction -->
   <node pkg="inspector" name="cluster_extraction" type="cluster_extractor" output="screen" />
-  <!-- <node pkg="cv_inspector_baxter" name="cloud1" type="point_publisher1" /> -->
-  <!-- <node pkg="cv_inspector_baxter" name="cloud2" type="point_publisher2" />
-  <node pkg="cv_inspector_baxter" name="cloud3" type="point_publisher3" />
-  <node pkg="cv_inspector_baxter" name="cloud4" type="point_publisher4" /> -->
-
+  
   <!-- Start rviz to display the extracted point cloud clusters -->
   <node pkg="rviz" type="rviz" respawn="false" name="rviz" if="$(arg show_pcl)"
         args="-d $(arg rvizConfig)" />
