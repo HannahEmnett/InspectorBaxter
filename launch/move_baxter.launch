@@ -1,0 +1,6 @@
+<launch>
+
+    <node pkg="baxter_interface" type="joint_trajectory_action_server.py" name="trajectory_node"/>
+    <include file="$(find baxter_moveit_config)/launch/demo_baxter.launch" />
+    <node pkg="inspector" type="pick_up.py" name="pick_up" />-
+</launch>
