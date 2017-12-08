@@ -8,12 +8,12 @@ from inspector.msg import ObjectList
 from sensor_msgs.msg import JointState
 import roslib; roslib.load_manifest("moveit_python")
 from moveit_python import PlanningSceneInterface, MoveGroupInterface
-from geometry_msgs.msg import PoseStamped, PoseArray
 from moveit_python.geometry import rotate_pose_msg_by_euler_angles
-from math import pi, sqrt
+from math import pi, sqrt, union
 from collections import Counter
 from operator import itemgetter
 import numpy as np
+
 import copy
 import time
 
@@ -50,7 +50,7 @@ global prev_state
 global prev_jts
 global back
 
-    
+
 #states 0-startup, 1-train, 2-sort, 3-fetch, 4-shutdown 5-standby
 class sorted():
     def __init__(self):
@@ -59,19 +59,20 @@ class sorted():
         self.jpos = None
 
 def init_sort_array():
-    jp1=[-0.14266021327334347, 1.1547040380807452, -0.6818544602150665, 0.15493205957642678, -3.052238272695002, 1.3395487230209375, 0.15224759319762732]
-    jp2= [-0.11543205428837738, 1.3253594007329974, -0.7516505860638527, 0.17027186745528092, -2.927602333679312, 1.5217089415823304, 0.05177185159113271]
-    jp3=[-0.12156797743991904, 1.3947720313848124, -0.6557767868210144, 0.215907795894872, -3.0530052630889446, 1.6237186639767105, 0.146495165243057]
-    jp4= [-0.19941750242510378, 0.7880826297761313, -0.5073641455931006, 0.29260683528914266, -2.890786794770062, 1.0822234458531594, 0.045252433242619704]
-    jp5=[-0.11159710231866385, 1.2333205534598726, -0.4651796739262517, 0.17065536265225228, -2.8693110637396666, 1.417014752809151, 0.06212622190935926]
-    jp6=[-0.09012137128826805, 1.3744467859453307, -0.4720825874717361, 0.20632041597058814, -2.8938547563458332, 1.6386749766585933, 0.0782330201821561]
-    jp7=[-0.19826701683418974, 0.9625729443980972, -0.2519563444101792, 0.2703641138648042, -2.616204233738573, 1.2494273517326695, -0.004601942363656241]
-    jp8=[-0.16490293469768197, 1.20992734644462, -0.2331650797585829, 0.2247281854252131, -2.980524670861359, 1.496398258582221, 0.13882526130362993]
-    jp9= [-0.06557767868210143, 1.328043867111797, -0.22127672865247094, 0.17333982903105175, -2.600097435465776, 1.5090536000822758, 0.04563592843959106]
+    jp1= [0.0, 1.4289031039152629, -1.8768254939778037, 1.2478933709447841, 0.06020874592450249, -0.32175247025896553, 1.3257428959299689, 1.744903146219658, -0.4598107411686528, -0.6968107728969491, 1.4185487335970364, 0.9648739155799253, 0.42146122147151743, 1.8426944214473533, -0.8762865250795426, 0.12386894862174716, -12.565987119160338]
+    jp2=  [0.0, 1.4289031039152629, -1.8779759795687179, 1.2471263805508415, 0.06059224112147384, -0.32175247025896553, 1.3257428959299689, 1.7452866414166295, -0.4601942363656241, -0.5936505649116551, 1.6248691495676244, 1.3694613483847031, 0.4314320965927726, 2.1468061126456366, -0.8245146734884099, 0.07708253459124204, -12.565987119160338]
+    jp3= [0.0, 1.4289031039152629, -1.8779759795687179, 1.2478933709447841, 0.06020874592450249, -0.32098547986502285, 1.32612639112694, 1.744903146219658, -0.4601942363656241, -0.5698738626994312, 0.9138690543827352, 0.7923010769428162, 0.3079466431679968, 1.8545827725534652, -1.1044661672774978, -0.41724277430483253, -12.565987119160338]
+    jp4= [0.0, 1.4289031039152629, -1.8775924843717464, 1.2475098757478127, 0.059825250727531136, -0.3213689750619942, 1.3265098863239115, 1.744903146219658, -0.45942724597168144, -0.558752501987262, 1.1815487018687398, 1.100247720110813, 0.23239808936464018, 2.038660467099715, -1.1029321864896124, -0.38004374019861126, -12.565987119160338]
+    jp5=[0.0, 1.4285196087182916, -1.8775924843717464, 1.2475098757478127, 0.06059224112147384, -0.32175247025896553, 1.326893381520883, 1.7441361558257154, -0.4601942363656241, -0.3501311148348457, 0.4931748233051605, 0.571791338684288, 0.35971849475912954, 1.6064613801129994, -1.191519576989995, -0.6197282383057071, -12.565987119160338]
+    jp6=[0.0, 1.4292865991122343, -1.8775924843717464, 1.2478933709447841, 0.06020874592450249, -0.3213689750619942, 1.32612639112694, 1.7445196510226868, -0.46057773156259546, -0.38157772098649667, 0.7416797109425975, 0.8720680779128577, 0.2676796474860047, 1.8384759742806684, -1.2743545395358076, -0.553383569229663, -12.565987119160338]
+    xp1=[0.5,-0.85,-0.1]
+    xp2=[0.68,-0.82,-0.14]
+    xp3=[0.60,-0.84,-0.1]
     sort_array=sorted()
-    sort_array.c_index = ['1', '1', '1', '2', '2', '2', '3', '3', '3']
-    sort_array.p_index = ['a','b','c','a','b','c','a','b','c']
-    sort_array.jpos= [jp1,jp2,jp3,jp4,jp5,jp6,jp7,jp8,jp9]
+    sort_array.c_index = ['1', '1', '2',  '2', '3',  '3']
+    sort_array.p_index = ['a','b','a','b','a','b']
+    #sort_array.jpos= [jp1,jp2,jp3,jp4,jp5,jp6,jp7,jp8,jp9]
+    sort_array.jps=[xp1,xp2,xp3]
 
 def state_int(data):
     if data.state == 1:
@@ -133,16 +134,14 @@ def standby():
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
-    elif prev_state == 3:
+    else:
         right_gripper.open()
         a.moveToJointPosition(jts_right, neutral, plan_only=False)
-    else:
-        return
     done=Update()
     done.state=5
     done.done=1
     out=pub.publish(done)
-    
+
 
 def train_loop(data):
     #initializations
@@ -172,7 +171,7 @@ def train_loop(data):
         right_gripper.open()
         a.moveToJointPosition(jts_all,last_joints2, plan_only=False)
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
-        
+
     # Clear planning scene
     p.clear()
     # Add table as attached object
@@ -210,7 +209,7 @@ def train_loop(data):
         temp = rospy.wait_for_message("/robot/joint_states", JointState)
         joints=temp.position
         last_joints2 =copy.deepcopy(joints)
-    
+
  # Move left arm to pick object and pick object
     goal = PoseStamped()
     goal.header.frame_id = "base"
@@ -301,9 +300,9 @@ def fetch_loop(data):
     goal.pose.orientation.w = 0.7
     a.moveToPose(goal, "right_gripper", plan_only=False)
 
-    
+
     right_gripper.close()
- 
+
     #lift the object up
     a.moveToJointPosition(jts_right, up, plan_only=False)
     time.sleep(1)
@@ -318,22 +317,30 @@ def fetch_loop(data):
     rospy.loginfo("Waiting for master...")
 
 def sort_loop(data):
+    global prev_sort
+
+    stop_out=[0.0, 1.430053589506177, -1.8764419987808323, 1.2475098757478127, 0.05944175553055978, -0.32098547986502285, 1.32612639112694, 1.7452866414166295, -0.46057773156259546, -0.1514806028036846, 1.309636097657172, 0.9805972186557508, 0.10776215034895031, 1.7172914920377207, -1.424684656748578, -0.222427214243385, -12.565987119160338]
+    col1= [0.0, 1.4292865991122343, -1.877208989174775, 1.2478933709447841, 0.06020874592450249, -0.32175247025896553, 1.3265098863239115, 1.745670136613601, -0.46096122675956686, -0.0617427267123879, 1.827354613568499, 1.0193302335498575, 0.06059224112147384, 1.650179832567734, -1.3940050409908697, 0.33287383097113477, -12.565987119160338]
+    col2= [0.0, 1.4289031039152629, -1.8200682048260435, 1.3046506600965444, 0.0682621450609009, -0.25464081078897866, 1.3656263964149895, 1.66321866926476, -0.48473792897179074, -0.28301945536485884, 1.4308205799001197, 1.1497186005201177, 0.07976700097004151, 1.931281811947736, -1.281257453081292, -0.20286895919784598, -12.565987119160338]
+    col3=  [0.0, 1.4292865991122343, -1.8200682048260435, 1.305417650490487, 0.06902913545484361, -0.25579129637989273, 1.366009891611961, 1.6628351740677885, -0.48473792897179074, -0.2607767339405203, 0.9242234247009617, 1.036204022216597, 0.15838351634916897, 1.9067381193415693, -1.3909370794150988, -0.5760097858509728, -12.565987119160338]
+
     #initializations
     done=Update()
-
-    #unpack the message (arrays of object positions)
-    for i in range(1,len(data.objects.height)):
-        xpos[i]=data.objects.centroid[i].x
-        ypos[i]=data.objects.centroid[i].y
-        zpos[i]=data.objects.centroid[i].z
-        heights=data.objects.height[i]
-        widths=data.objects.width[i]
-        num=data.obj_index[i]
+    xpos=[]
+    ypos=[]
+    zpos=[]
+    id_mast=[]
+    for object, obj in zip(data.objects, data.obj_index):
+        xpos.append(object.centroid.x)
+        ypos.append(object.centroid.y)
+        zpos.append(object.centroid.z)
+        id_mast.append(obj)
 
     # Clear planning scene
     p.clear()
     # Add table as attached object
     p.attachBox('table', 0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
+    p.waitForSync()
 
     place=PoseStamped()
     place.header.frame_id = "base"
@@ -352,178 +359,89 @@ def sort_loop(data):
         xn = xpos[q]
         yn = ypos[q]
         zn = zpos[q]
-        id_num=num[q]
+        id_num=id_mast[q]
 
         #Add all items to collision scene
         objlist = ['obj1', 'obj2', 'obj3']
         sortlist=['sort1','sort2','sort3','sort4','sort5','sort6','sort7','sort8','sort9','sort10']
-        for i in range(1,len(xpos)):
-            p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
+        #for i in range(1,len(xpos)):
+        #    p.addCyl(objlist[i], 0.05, xpos[i], ypos[i], zpos[i])
         #for i in range(1,len(prev_sort)):
             #p.addCyl(sortlist[i], 0.05, prev_sort[1,i], prev_sort[2,i], prev_sort[3,i])
-        p.waitForSync()
+
 
         # Move left arm to pick object and pick object
         goal = PoseStamped()
         goal.header.frame_id = "base"
         goal.header.stamp = rospy.Time.now()
-        goal.pose.position.x = xn-0.3
+        goal.pose.position.x = xn-0.5
         goal.pose.position.y = yn
-        goal.pose.position.z = zn
+        goal.pose.position.z = zn-0.4
         goal.pose.orientation.x = 0.0
         goal.pose.orientation.y = 0.7
         goal.pose.orientation.z = 0.0
         goal.pose.orientation.w = 0.7
         a.moveToPose(goal, "right_gripper", plan_only=False)
 
-
-
-        
         #here would add gripper information
-        a.moveToPose(goal,"right_gripper", plan_only=False)
+        #a.moveToPose(goal,"right_gripper", plan_only=False)
         right_gripper.close()
 
         a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
-        hand_off_from_right()
+        a.moveToJointPosition(jts_right,stop_out,plan_only=False)
 
         if id_num==1:
-            g.moveToJointPosition(jts_left, pos1,plan_only=False)
-            if x_1 ==2:
-                out=union(np.where(sort_array.c_index == '1')[0],np.where(sort_array.c_index == 'c')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
-            elif x_1==1:
+            a.moveToJointPosition(jts_right, col1,plan_only=False)
+            if x_1 ==1:
                 out=union(np.where(sort_array.c_index == '1')[0],np.where(sort_array.c_index == 'b')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
+
             else:
                 out=union(np.where(sort_array.c_index == '1')[0],np.where(sort_array.c_index == 'a')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
+            right_gripper.open()
+            a.moveToJointPosition(jts_right, col1,plan_only=False)
         elif id_num==2:
-            g.moveToJointPosition(jts_left, pos2,plan_only=False)
-            if x_1 ==2:
-                out=union(np.where(sort_array.c_index == '2')[0],np.where(sort_array.c_index == 'c')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
-            elif x_1==1:
+            a.moveToJointPosition(jts_right,col2,plan_only=False)
+            if x_1 ==1:
                 out=union(np.where(sort_array.c_index == '2')[0],np.where(sort_array.c_index == 'b')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
             else:
                 out=union(np.where(sort_array.c_index == '2')[0],np.where(sort_array.c_index == 'a')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
+            right_gripper.open()
+            a.moveToJointPosition(jts_right, col2,plan_only=False)
         else:
-            g.moveToJointPosition(jts_left, pos3,plan_only=False)
-            if x_1 ==2:
-                out=union(np.where(sort_array.c_index == '3')[0],np.where(sort_array.c_index == 'c')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
-            elif x_1==1:
+            a.moveToJointPosition(jts_right, col3,plan_only=False)
+            if x_1 ==1:
                 out=union(np.where(sort_array.c_index == '3')[0],np.where(sort_array.c_index == 'b')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
             else:
                 out=union(np.where(sort_array.c_index == '3')[0],np.where(sort_array.c_index == 'a')[0])
-                g.moveToJointPosition(jts_left,sort_array.jpos[out],plan_only=False)
+                a.moveToJointPosition(jts_right,sort_array.jpos[out],plan_only=False)
+            right_gripper.open()
+            a.moveToJointPosition(jts_right, col3,plan_only=False)
 
-        right_gripper.open()
-        g.moveToJointPosition(jts_left,l_neut,plan_only=False)
+        a.moveToJointPosition(jts_right,stop_out,plan_only=False)
 
         out=find_first(0,prev_sort[0,:])
         prev_sort[0,out]=id_num
-        prev_sort[1,out]=heights[q]
-        prev_sort[2,out]=widths[q]
-        prev_sort[3,out]=zp
+        prev_sort[1,out]=xn
+        prev_sort[2,out]=yn
+        prev_sort[3,out]=zn
 
     done.done=1
     done.state=2
     out=pub.publish(done)
+    prev_state=2
     rospy.loginfo("Waiting for master...")
-    rospy.spin()
 
 def find_first(item, vec):
     for i in xrange(len(vec)):
         if item == vec[i]:
             return i
     return -1
-
-def test_loop():
-    # Clear planning scene
-    p.clear()
-    # Add table as attached object
-    p.attachBox('table',0.76, 1.22, 0.735, 1.13, 0, -0.5525, 'base', touch_links=['pedestal'])
-
-
-    xn = 1
-    yn = -0.3
-    zn = -0.1
-
-    p.waitForSync()
-
-    # Move left arm to pick object and pick object
-    goal = PoseStamped()
-    goal.header.frame_id = "base"
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x = xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal, "right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    goal.header.stamp = rospy.Time.now()
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
-
-    xn=1
-    yn=-0.2
-    zn=-0.1
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x =xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal,"right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    goal.header.stamp = rospy.Time.now()
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
-
-    xn=1
-    yn=-0.4
-    zn=-0.1
-    goal.header.stamp = rospy.Time.now()
-    goal.pose.position.x =xn
-    goal.pose.position.y = yn
-    goal.pose.position.z = zn
-    goal.pose.orientation.x = 0.0
-    goal.pose.orientation.y = 0.7
-    goal.pose.orientation.z = 0.0
-    goal.pose.orientation.w = 0.7
-    a.moveToPose(goal,"right_gripper", plan_only=False)
-    right_gripper.close()
-    temp = rospy.wait_for_message("/robot/joint_states", JointState)
-    joints=temp.position
-    last_joints=copy.deepcopy(joints)
-
-    #lift the object up
-    a.moveToJointPosition(jts_right, up, plan_only=False)
-    a.moveToJointPosition(jts_all,joints, plan_only=False)
-    right_gripper.open()
-    a.moveToJointPosition(jts_right, neutral, plan_only=False)
 
 
 def hand_off_from_right():
@@ -533,6 +451,7 @@ def hand_off_from_right():
     a.moveToJointPosition(jts_right, ho1_r, plan_only=False)
     g.moveToJointPosition(jts_left,ho2_l,plan_only=False)
     left_gripper.close()
+    time.sleep(0.5)
     right_gripper.open()
     g.moveToJointPosition(jts_left,ho1_l,plan_only=False)
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
@@ -551,8 +470,6 @@ def hand_off_from_left():
     a.moveToJointPosition(jts_right,neutral,plan_only=False)
 
 
-
-
 if __name__=='__main__':
     rospy.init_node("pick_up")
 
@@ -560,7 +477,7 @@ if __name__=='__main__':
     left_gripper = baxter_interface.Gripper('left')
     last_joints=[]
 
-
+    prev_sort = []
     #Position initializations
     #neutral = [1.5784662307340906, 1.1270923838988078, -0.08206797215186963, 1.0139613007922585, 1.403975916112125, 0.5971020216843973, -0.7528010716547668]
     neutral =[-0.038733014894106695, 1.3775147475211016, 0.9510680884889565, 0.18062623777350748, 0.14687866044002837, -1.5704128315976924, 0.017257283863710903]
@@ -584,13 +501,11 @@ if __name__=='__main__':
 
     pub=rospy.Publisher("inspector/master_update",Update,queue_size=1)
     rospy.Subscriber("inspector/obj_list",ObjectList, state_int)
-    
+
     #prev_sort=[float('nan') for x in range(10)] for y in range(4)]
     #Going to neutral and then getting into position
     rospy.loginfo("Getting into position...")
     #startup()
     init_sort_array()
     wait_for_coord()
-    #test_loop()
-    #hand_off()
     rospy.spin()
