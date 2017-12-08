@@ -110,9 +110,27 @@ phase 5: standby
 ## Master Node
 
 #### Overview
+The master node is the co-ordinator of the whole program execution. It has three main input sources -
+- Sensory data in the form of PclData from the perception_pcl node.
+- Speech commands translated into integers for the state representation and strings for object names
+- Status update messages from the pick_up node
+
+The master node keeps track of what state the demo is in based upon encoded state messages received from the speech node. Based upon the current state and the incoming state it executes the appropriate functionality.
+It continuously receives PclData from the perception_pcl node. However for the purpose of the demo, the incoming data is processed and stored only once, at init time.
+The PclData is stored in a sorted fashion based upon the eucledian distance from the origin. This ensures that Baxter starts picking up objects nearest to it during the learning phase.
+It also groups these PclData objects together using a simple algorith where two objects with similar height/width ratio are considered objects of the same group type, e.g. "cans".
+During the learning phase, these objects andgroups are associated with a name string provided by the user.
+During the training phase master node sends a ObjectList message to the pick_up node so that it can move to the object that needs to be picked up so that the usernames the object.
+When the object has been named, master node send the location of the next object (as per eucledian distance) so that the robot arm moves to that location and picks up the object for naming. This process iterates through until all the objects are named and then an ObjectList message with a flag sent to STANDBY is sent to pick_up node, so that the robot arm returns to the neutral position.
+
+In the fetch phase, master node sends the object groupId/index in the ObjectList mesg to thepick_up node, where the object_index in the message is the group_id associated with any object belong to the same group (and name).
+In the SORT phase, master object sends a list of the locations of all objects along with their group_id so that pick_up node canfetch anyone of the objects of the requested type.
+
+Master node sends a FINISH message so that the speech node is ready for the next command.
+When the EXIT command is given, the MASTER node sends an EXIT state message to the pcl_perception and pick_up node and also cleans up its own data structures and returns to INIT state.
 
 #### Instructions
-
+The launch file, [master_launch.launch] runs the master node
 
 ## Speech Recognition Node
 
