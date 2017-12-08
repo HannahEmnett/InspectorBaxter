@@ -5,39 +5,41 @@ ME495- Embedded Systems in Robotics Final Project
 Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 
 ## Package Structure Overview
-`src`: contains the `baxter_speech.py`, `pick_up.py`, `cluster_extracter.cpp`, and `master.py`   
+`src`: contains the `baxter_speech.py`, `pick_up.py`, `cluster_extracter.cpp`, `pcl_transform.py` and `master.py`   
 `msg`: contains `PclData.msg`, `ObjectList.msg`, `State.msg`, `Update.msg`, `Pcl_Update.msg`   
 `launch`: contains `move_baxter.launch`, `baxter_speech.launch`, `pcl_extract.launch`, and `master_launch.launch`
 `images` and `vocab`: contains images to be displayed to Baxter's screen and contains the necessary vocab for `pocketsphinx`
 
 ## Overview of Functionality
 ### Relevant nodes (not including extra nodes task specific):  
-1. master.py   
-    - Sub: i/master_update, i/pcl_data, i/state  
-    - Pub: i/obj_list, i/state, i/pcl_req
-2. pick_up.py   
+1. `master.py`  
+    - Sub: i/master_update, i/pclData2, i/state  
+    - Pub: i/obj_list, i/state
+2. `pick_up.py`   
     - Sub: i/obj_list   
     - Pub: i/master_update   
-3. baxter_speech.py   
+3. `baxter_speech.py`   
     - Sub: i/state   
     - Pub: i/state   
-4. proc_pc.py (or whatever its called)   
-    - Sub: i/pcl_req   
-    - Pub: i/pcl_data   
+4. `cluster_extracter.cpp`   
+    - Sub: none  
+    - Pub: pclData    
+5. `pcl_transform.py`    
+    - Sub: pclData   
+    - Pub: i/pclData2   
 
 ### Relevant topics (not including extra topics task specific):   
-1. inspector/state   - state.msg   
-2. inspector/obj_list   -objectlist.msg   
-3. inspector/pcl_data   -pcldata.msg   
-4. inspector/master_update  -update.msg   
-5. inspector/pcl_req   -pcl_update.msg     
+1. inspector/state   - State.msg   
+2. inspector/obj_list   -ObjectList.msg   
+3. pclData   -PclData.msg   
+4. inspector/master_update  -Update.msg   
+5. inspector/pclData2   - PclData.msg   
 
 ### Relevant Msgs:
 1. ObjectList.msg (of format: int32 state, int32 next, pcldata objects, int32 obj_index   
 2. PclData.msg (of format: point32 centroids, float32 heights, float32 widths, float32 obj_id)   
 3. State.msg (of format: int32 state, string name, int32 done)   
-4. Update.msg (of format: int8 state, int8 done)   
-5. Pcl_Update.msg (of format: int8 state)   
+4. Update.msg (of format: int8 state, int8 done)      
 
 ### Phases:
 0- initialize - internal phase   
@@ -59,7 +61,7 @@ phase 1: training
 - baxter_speech publishes state=1 and name="<object 1 name>" on State.msg
 - master is updated of training state   
 - master pub pcl_update.msg on i/pcl_req   
-- proc_pc publishes pcldata.msg on i/pcl_data   
+- cluster_extractor publishes pcldata.msg on i/pcl_data   
 - master publishes objlist on i/obj_list (only first but stores others)   
 - pick_up picks up object at centroid and lifts to user. publishes update.msg on i/master update   
 - master publishes i/state as a done flag so that baxter_speech is listening      
@@ -73,7 +75,7 @@ phase 2: sort
 - baxter_speech pub state=2 in State.msg on i/state   
 - master is updated of sorting state   
 - master publishes pcl_update.msg on i/pcl_req   
-- proc_pc publishes pcldata.msg on i/pcl_data   
+- cluster_extractor publishes pcldata.msg on i/pcl_data   
 - master determines obj_ids internally   
 - master publishes objlist on i/obj_list   
 - pick_up picks up object at centroid and moves to predetermined shelf based on obj id. It internally stores locations of all previously sorted objects. Loops until everything is sorted.   
@@ -86,7 +88,7 @@ phase 3: fetch
 - baxter_speech pub state=3 and name="<object 1 name>" in State.msg on i/state   
 - master is updated of fetch state  
 - master pub on i/pcl_req   
-- proc_pc receives pcl_req from master and returns on pcl_update   
+- cluster_extractor receives pcl_req from master and returns on pcl_update   
 - master looks through list and identifies “can” centroid   
 - master pub objectlist.msg on i/obj_list (this message also includes identity), only 1 location or Nans   
 - pick_up will test: if all Nans, will look in previously sorted location for objs of correct id, ELSE, will pick up at centroid provided and present to user. Publishes update.msg on i/master_update   
@@ -179,7 +181,7 @@ Now, as the user gives commands, our other nodes can subscribe to the `/inspecto
 ### Overview
 1. An [ASUS XtionPRO LIVE](https://www.asus.com/us/3D-Sensor/Xtion_PRO_LIVE/) is used to view Baxter's environment. This sensor was chosen over other depth sensing devices like the Kinect because of its relative ease of use with computers. Point cloud locations and the centroid of each object is published to a topic that the `master.py` node subscribes to.
 
-2. This part of the project extensively uses `perception_pcl` to compute multiple point clouds of various objects on a flat surface. The [`pcl_extract.launch`](launch/pcl_extract.launch) file reads in raw point cloud data from the XtionPRO and filters it to a more manageable dataset. The [cluster_extractor](src/cluster_extractor.cpp) node takes the filtered point cloud data and extracts point clusters. Finally, the centroid, height, width, and width:height ratio are computed and published on the `/pclData` topic. From there, the [`pcl_transform.py`](src/pcl_transform.py) node transforms the centroid values to Baxter's frame of reference and publishes the points to the `/pclData2` topic.
+2. This part of the project extensively uses `perception_pcl` to compute multiple point clouds of various objects on a flat surface. The [`pcl_extract.launch`](launch/pcl_extract.launch) file reads in raw point cloud data from the XtionPRO and filters it to a more manageable dataset. The [cluster_extractor](src/cluster_extractor.cpp) node takes the filtered point cloud data and extracts point clusters. Finally, the centroid, height, width, and width:height ratio are computed and published on the `/cluster_extractor` topic. From there, the [`pcl_transform.py`](src/pcl_transform.py) node transforms the centroid values to Baxter's frame of reference and publishes the points to the `/cluster_extractor2` topic.
 
 ### Running the Code
 *Make sure all required packages are properly installed and the XtionPRO LIVE is pluged in!*

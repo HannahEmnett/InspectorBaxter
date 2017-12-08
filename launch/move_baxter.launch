@@ -1,11 +1,6 @@
 <launch>
-
-    <node pkg="baxter_interface" type="joint_trajectory_action_server.py" name="trajectory_node" >
-    </node>
+    <!--launch the joint trajectory action server, the baxter rviz config and the node to move objects -->
+    <node pkg="baxter_interface" type="joint_trajectory_action_server.py" name="trajectory_node" />
     <include file="$(find baxter_moveit_config)/launch/demo_baxter.launch" />
-
-    <!--node pkg="baxter_tools" type="camera_control.py" name="open_right_camera" output="screen"  args="-o right_hand_camera -r 1280x800" />
-  
-
-	<node pkg="inspector" type="pick_up.py" name="pick_up" />-->
+    <node pkg="inspector" type="pick_up.py" name="pick_up" />
 </launch>
