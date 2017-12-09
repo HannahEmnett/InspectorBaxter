@@ -7,33 +7,36 @@ Click [here](https://youtu.be/RWrGTcJuRpk) to watch Baxter in action!
 Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
 
 ## Project Overview
-The desired outcome of this project was to have Baxter identify objects using a point cloud and classify them by their shape. The project has three phases: a training phase where Baxter learns the objects, a fetching phase where Baxter picks up objects that are asked for by the user, and a sorting phase where Baxter sorts objects based on their classification. The video linked above shows Baxter performing the first two phases. Below is a general description of the four basic components of this project: a master node that coordinates communication, a speech processing node, a point cloud processing node, and a movement node.
+The desired outcome of this project was to have Baxter identify objects using a point cloud and classify them by their shape. The project has three phases: a training phase where Baxter learns the objects, a fetching phase where Baxter picks up objects that are asked for by the user, and a sorting phase where Baxter sorts objects based on their classification. The video linked above shows Baxter performing the first two phases. Below is a general description of the four basic components of this project: a master node that coordinates communication, a speech processing node, a point cloud processing node, and a movement node. Before running the project, make sure the correct location of the XtionPRO LIVE is denoted in `pcl_transform.py`. In order to run the whole project, run the following command:   
+```
+>>roslaunch inspector master_launch.launch
+```
 
 ## Package Structure Overview
 `src`: contains the `baxter_speech.py`, `pick_up.py`, `cluster_extracter.cpp`, `pcl_transform.py` and `master.py`   
 `msg`: contains `PclData.msg`, `ObjectList.msg`, `State.msg`, `Update.msg`, `Pcl_Update.msg`   
 `launch`: contains `move_baxter.launch`, `baxter_speech.launch`, `pcl_extract.launch`, and `master_launch.launch`
-`rviz`: contains RVIZ configuration files
-`misc`: contains the original project proposal
+`rviz`: contains RVIZ configuration files   
+`misc`: contains the original project proposal   
 `images`, `screenshots`, and `vocab`: contains images to be displayed to Baxter's screen and contains the necessary vocab for `pocketsphinx`
 
 ## Overview of Functionality
 ### Relevant nodes (not including extra nodes task specific):  
 1. `master.py`  
-    - Sub: i/master_update, i/pclData2, i/state  
-    - Pub: i/obj_list, i/state
+    - Sub: inspector/master_update, inspector/pclData2, inspector/state  
+    - Pub: inspector/obj_list, inspector/state
 2. `pick_up.py`   
-    - Sub: i/obj_list   
-    - Pub: i/master_update   
+    - Sub: inspector/obj_list   
+    - Pub: inspector/master_update   
 3. `baxter_speech.py`   
-    - Sub: i/state   
-    - Pub: i/state   
+    - Sub: inspector/state   
+    - Pub: inspector/state   
 4. `cluster_extracter.cpp`   
     - Sub: none  
     - Pub: pclData    
 5. `pcl_transform.py`    
     - Sub: pclData   
-    - Pub: i/pclData2   
+    - Pub: inspector/pclData2   
 
 ### Relevant topics (not including extra topics task specific):   
 1. inspector/state   - State.msg   
@@ -43,7 +46,7 @@ The desired outcome of this project was to have Baxter identify objects using a 
 5. inspector/pclData2   - PclData.msg   
 
 ### Relevant Msgs:
-1. ObjectList.msg (of format: int32 state, int32 next, pcldata objects, int32 obj_index   
+1. ObjectList.msg (of format: int32 state, int32 next, pcldata objects, int32 obj_index)    
 2. PclData.msg (of format: point32 centroids, float32 heights, float32 widths, float32 obj_id)   
 3. State.msg (of format: int32 state, string name, int32 done)   
 4. Update.msg (of format: int8 state, int8 done)      
@@ -63,8 +66,7 @@ phase 0: init
 - Phase immediately updates to 5 (standby) and master.py publishes on state.msg and obj_list.msg to notify of standby      
 
 phase 1: training   
-*Note: Must be first after phase 0*   
-- user says "Baxter, learn <object 1 name>"   
+- user says "Baxter, learn <object 1 name>" (this must be first after phase 0)   
 - baxter_speech publishes state=1 and name="<object 1 name>" on State.msg
 - master is updated of training state   
 - master pub pcl_update.msg on i/pcl_req   
@@ -88,7 +90,6 @@ phase 2: sort
 - pick_up picks up object at centroid and moves to predetermined shelf based on obj id. It internally stores locations of all previously sorted objects. Loops until everything is sorted.   
 - Publishes update.msg on i/master update   
 - Master publishes on i/state and i/obj_list a state of 5   
-
 
 phase 3: fetch
 - User says "Baxter, fetch <object 1 name>" (must happen after train but sort can be first)   
@@ -128,10 +129,10 @@ The PclData is stored in a sorted fashion based upon the eucledian distance from
 It also groups these PclData objects together using a simple algorithm where two objects with similar height/width ratio are considered objects of the same group type, e.g. "cans".
 
 During the learning phase, these objects andgroups are associated with a name string provided by the user.
-During the learning phase master node sends a ObjectList message to the pick_up node so that it can move to the object that needs to be picked up so that the usernames the object.
-When the object has been named, master node sends the location of the next object (as per eucledian distance) so that the robot arm moves to that location and picks up the object for naming. This process iterates through until all the objects are named and then an ObjectList message with a flag sent to STANDBY is sent to pick_up node, so that the robot arm returns to the neutral position.
+During the learning phase master node sends a ObjectList message to the pick_up node so that it can move to the object that needs to be picked up so that the user names the object.
+When the object has been named, master node sends the location of the next object (as per euclidean distance) so that the robot arm moves to that location and picks up the object for naming. This process iterates through until all the objects are named and then an ObjectList message with a flag sent to STANDBY is sent to pick_up node, so that the robot arm returns to the neutral position.
 
-In the fetch phase, master node sends the object groupId/index in the ObjectList mesg to the pick_up node, where the object_index in the message is the group_id associated with any object belong to the same group (and name).
+In the fetch phase, master node sends the object groupId/index in the ObjectList.msg to the pick_up node, where the object_index in the message is the group_id associated with any object belong to the same group (and name).
 In the SORT phase, master object sends a list of the locations of all objects along with their group_id so that pick_up node can fetch any one of the objects of the requested type.
 
 Master node sends a FINISH message so that the speech node is ready for the next command.
@@ -267,14 +268,14 @@ You are now prepared to move Baxter!
 
 #### Instructions
 
-First, ensure Baxter starts in the neutral position. Next, if you are only trying to move Baxter (not use the listening or point cloud extracting functionality), run the following.
+The primary files needed for moving Baxter are the `pick_up.py` node and the launch file, linked [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/src/pick_up.py) and [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/launch/move_baxter.launch) respectively. First, ensure Baxter starts in the neutral position. Next, if you are only trying to move Baxter (not use the listening or point cloud extracting functionality), run the following.
 ```
 >>rosrun inspector move_neutral.py
 >>roslaunch inspector move_baxter.launch
 ```
 This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`.
 
-The code essentially runs through a similar loop for all functionality. It receives the centroid and the object id from the master node, uses MoveIt! to pick up the object, and goes to a predetermined joint location for lifting the object up. Then, it either puts the object back down, drops the object, or places it with other objects of the same type. 
+The code essentially runs through a similar loop for all functionality. It receives the centroid and the object id from the master node, uses MoveIt! to pick up the object, and goes to a predetermined joint location for lifting the object up. Then, it either puts the object back down, drops the object, or places it with other objects of the same type.
 
 
 [baxter_speech]: https://github.com/weatherman03/baxter_speech
