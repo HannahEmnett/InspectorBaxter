@@ -1,14 +1,21 @@
 # InspectorBaxter
-ME495- Embedded Systems in Robotics Final Project
+ME495- Embedded Systems in Robotics Final Project   
+Click [here](https://youtu.be/RWrGTcJuRpk) to watch Baxter in action!
+![image](screenshots/baxterfetch.png)
 
 ## Group Members
 Hannah Emnett, Aamir Husain, Peng Peng, Srikanth Kilaru, Aaron Weatherly
+
+## Project Overview
+The desired outcome of this project was to have Baxter identify objects using a point cloud and classify them by their shape. The project has three phases: a training phase where Baxter learns the objects, a fetching phase where Baxter picks up objects that are asked for by the user, and a sorting phase where Baxter sorts objects based on their classification. The video linked above shows Baxter performing the first two phases. Below is a general description of the four basic components of this project: a master node that coordinates communication, a speech processing node, a point cloud processing node, and a movement node.
 
 ## Package Structure Overview
 `src`: contains the `baxter_speech.py`, `pick_up.py`, `cluster_extracter.cpp`, `pcl_transform.py` and `master.py`   
 `msg`: contains `PclData.msg`, `ObjectList.msg`, `State.msg`, `Update.msg`, `Pcl_Update.msg`   
 `launch`: contains `move_baxter.launch`, `baxter_speech.launch`, `pcl_extract.launch`, and `master_launch.launch`
-`images` and `vocab`: contains images to be displayed to Baxter's screen and contains the necessary vocab for `pocketsphinx`
+`rviz`: contains RVIZ configuration files
+`misc`: contains the original project proposal
+`images`, `screenshots`, and `vocab`: contains images to be displayed to Baxter's screen and contains the necessary vocab for `pocketsphinx`
 
 ## Overview of Functionality
 ### Relevant nodes (not including extra nodes task specific):  
@@ -266,6 +273,8 @@ First, ensure Baxter starts in the neutral position. Next, if you are only tryin
 >>roslaunch inspector move_baxter.launch
 ```
 This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`.
+
+The code essentially runs through a similar loop for all functionality. It receives the centroid and the object id from the master node, uses MoveIt! to pick up the object, and goes to a predetermined joint location for lifting the object up. Then, it either puts the object back down, drops the object, or places it with other objects of the same type. 
 
 
 [baxter_speech]: https://github.com/weatherman03/baxter_speech
