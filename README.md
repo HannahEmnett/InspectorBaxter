@@ -268,14 +268,14 @@ You are now prepared to move Baxter!
 
 #### Instructions
 
-The primary files needed for moving Baxter are the `pick_up.py` node and the launch file, linked [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/src/pick_up.py) and [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/launch/move_baxter.launch) respectively. First, ensure Baxter starts in the neutral position. Next, if you are only trying to move Baxter (not use the listening or point cloud extracting functionality), run the following.
+The primary files needed for moving Baxter are the `pick_up.py` node and the `move_baxter.launch` launch file, linked [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/src/pick_up.py) and [here](https://github.com/HannahEmnett/InspectorBaxter/blob/9644e68444f1a38b5950a1fffb3c941413a90024/launch/move_baxter.launch) respectively. First, ensure Baxter starts in the neutral position. Next, if you are only trying to move Baxter (not use the listening or point cloud extracting functionality), run the following.
 ```
 >>rosrun inspector move_neutral.py
 >>roslaunch inspector move_baxter.launch
 ```
-This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic. This operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`.
+This will allow you to publish `ObjectList.msg` on the `inspector/obj_list` topic and receive updates of form `Update.msg` on the `inspector/master_update` topic so that the movement can be tested out of the full loop. The `pick_up.py` node operates differently based on the five states listed above and functionality. To close out, ensure a state of "4" is published or simply run the `rosrun` command listed above to move Baxter back to the neutral condition and then `rosrun baxter_tools enable_robot.py -d`.
 
-The code essentially runs through a similar loop for all functionality. It receives the centroid and the object id from the master node, uses MoveIt! to pick up the object, and goes to a predetermined joint location for lifting the object up. Then, it either puts the object back down, drops the object, or places it with other objects of the same type.
+The node essentially runs through a similar loop for all functionality. It receives the centroid and the object id from the master node, uses MoveIt! to pick up the object, and goes to a predetermined joint location for lifting the object up. Then, it either puts the object back down, drops the object, or places it with other objects of the same type.
 
 
 [baxter_speech]: https://github.com/weatherman03/baxter_speech
